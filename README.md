@@ -6,6 +6,28 @@ Siswa berperan sebagai pedagang dan menyelesaikan soal-soal untung dan rugi
 
 ---
 
+## 🖼️ Tampilan Aplikasi
+
+### 1. Menu Utama
+![Menu utama](gambar/1-menu.png)
+
+### 2. Mengerjakan Soal: Pilihan Ganda
+Soal dan daftar tahapan ada di panel kiri. Tahap yang sedang dikerjakan ada di panel kanan.
+Jawaban yang benar ditandai hijau, lalu muncul pembahasan.
+![Soal pilihan ganda](gambar/2-pilihan.png)
+
+### 3. Mengerjakan Soal: Isian Angka
+![Soal isian angka](gambar/3-isian.png)
+
+### 4. Hasil Akhir
+Menampilkan nilai, predikat, skor, dan bintang tiap indikator.
+![Hasil akhir](gambar/4-hasil.png)
+
+### 5. Materi
+![Materi](gambar/5-materi.png)
+
+---
+
 ## 📋 Langkah-langkah
 
 ### A. Langkah Menjalankan Aplikasi
