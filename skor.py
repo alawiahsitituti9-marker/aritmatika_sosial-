@@ -16,13 +16,13 @@ def muat_skor(path: Path = FILE_SKOR) -> list[dict]:
         return []
 
 
-def tambah_skor(nama: str, skor: int, level: int, benar: int,
+def tambah_skor(nama: str, nilai: int, skor: int, mode: str,
                 path: Path = FILE_SKOR) -> int | None:
-    """Simpan skor; kembalikan peringkat (1-based) jika masuk papan skor."""
-    entri = {"nama": nama, "skor": skor, "level": level, "benar": benar,
+    """Simpan hasil; kembalikan peringkat (1-based) jika masuk papan skor."""
+    entri = {"nama": nama, "nilai": nilai, "skor": skor, "mode": mode,
              "tanggal": date.today().isoformat()}
     daftar = muat_skor(path) + [entri]
-    daftar.sort(key=lambda e: e.get("skor", 0), reverse=True)
+    daftar.sort(key=lambda e: (e.get("nilai", 0), e.get("skor", 0)), reverse=True)
     daftar = daftar[:MAKS_ENTRI]
     try:
         path.write_text(json.dumps(daftar, indent=2, ensure_ascii=False), encoding="utf-8")

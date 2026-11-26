@@ -1,33 +1,45 @@
-# 🛒 Pasar Pintar — Game Edukasi Aritmatika Sosial
+# 🛒 Pasar Pintar: Game Literasi Matematika Untung dan Rugi
 
-Draft aplikasi/game pembelajaran **Aritmatika Sosial** (Matematika SMP kelas VII)
-yang dibuat dengan **Python** dan **Tkinter**. Pemain berperan sebagai pedagang di pasar
-dan harus menjawab soal-soal hitungan jual-beli sehari-hari.
+Draft aplikasi/game pembelajaran untuk materi **Persentase Menghitung Untung dan Rugi**,
+dibuat dengan **Python** dan **Tkinter**. Soal disusun berdasarkan kisi-kisi
+**Mathematical Literacy**, dengan 4 indikator dan penilaian per tahapan penyelesaian.
 
-## Fitur
+## Isi Game: 4 Misi sesuai Kisi-kisi
 
-- **3 level kesulitan**
-  | Level | Nama | Materi |
-  |---|---|---|
-  | 1 | Pedagang Pemula | Untung & rugi, diskon, bruto–tara–neto |
-  | 2 | Pedagang Terampil | Persentase untung/rugi, harga jual, PPN 11%, persentase tara |
-  | 3 | Juragan Pasar | Harga beli, diskon bertingkat, bunga tunggal, lama menabung |
-- **Soal acak tak terbatas** — angka dibuat otomatis, jawaban selalu bilangan bulat.
-- **Pembahasan langkah demi langkah** setelah setiap soal (benar maupun salah).
-- **Mekanik game**: 10 soal per sesi, 3 nyawa ♥, timer 60 detik, bonus waktu & bonus jawaban beruntun 🔥.
-- **Menu materi** berisi ringkasan rumus dan contoh untuk tiap topik.
-- **Papan skor** (10 skor tertinggi) yang tersimpan di `skor_tertinggi.json`.
-- Input jawaban fleksibel: `15000`, `15.000`, `Rp 15.000`, `25%`, `40 kg` semuanya diterima.
+| Misi | Indikator | Soal | Tahapan | Skor Maks |
+|---|---|---|---|---|
+| 1 | Mathematical Reasoning | Memilih Penawaran dengan Keuntungan Terbesar (Toko A, B, C) | 5 tahap (Tahap 3 bernilai 2) | 6 |
+| 2 | Formulating Situations Mathematically | Menentukan Harga Jual dengan Persentase Keuntungan (blender) | 6 tahap | 6 |
+| 3 | Employing Mathematical Concepts, Facts, and Procedures | Menghitung Persentase Untung dan Rugi (sepeda & kipas angin) | 6 tahap | 6 |
+| 4 | Interpreting, Applying, and Evaluating Mathematical Outcomes | Mengevaluasi Pernyataan tentang Persentase Kerugian (jaket) | 6 tahap | 6 |
+
+**Total skor maksimum 24.** Nilai = skor ÷ 24 × 100, dengan predikat A/B/C/D.
+
+### Cara bermain
+- Soal ditampilkan di panel kiri, sedangkan siswa mengerjakannya **tahap demi tahap** di panel kanan,
+  mengikuti urutan "Kisi-kisi Jawaban per Tahapan Penyelesaian".
+- Tahap perhitungan dijawab dengan **mengisi angka**. Tahap identifikasi, model matematika,
+  perbandingan, dan kesimpulan dijawab dengan **pilihan ganda**. Pengecohnya disusun dari
+  miskonsepsi umum, misalnya membagi dengan harga jual atau memilih untung rupiah terbesar.
+- Setiap tahap langsung dinilai sesuai skor per tahapan, lalu **pembahasannya** ditampilkan.
+- Di akhir permainan muncul rekap capaian per indikator (★), nilai, predikat, dan saran indikator yang perlu dilatih.
+
+### Mode
+- **Soal Kisi-kisi**: 4 soal persis seperti dokumen kisi-kisi.
+- **Latihan Soal Acak**: 4 soal baru dengan indikator dan tahapan yang sama, tetapi angka, nama,
+  dan barangnya acak, sehingga bisa dipakai berlatih berulang kali.
+
+Fitur lainnya: menu **Materi** (rumus, contoh, dan kesalahan yang sering terjadi) serta **Papan Skor**.
 
 ## Cara Menjalankan
 
-Butuh **Python 3.10+** (Tkinter sudah termasuk di instalasi Python Windows/macOS).
+Butuh **Python 3.10+**. Tkinter sudah termasuk dalam instalasi Python untuk Windows/macOS.
 
 ```bash
 python main.py
 ```
 
-Menjalankan unit test:
+Menjalankan unit test (termasuk pengecekan bahwa kunci jawaban sama dengan kisi-kisi):
 
 ```bash
 python -m unittest discover -s tests -v
@@ -36,24 +48,13 @@ python -m unittest discover -s tests -v
 ## Struktur Kode
 
 ```
-main.py        # Tampilan (GUI Tkinter): menu, level, game, materi, papan skor
-permainan.py   # Logika permainan: skor, nyawa, nomor soal, penilaian jawaban
-soal.py        # Generator soal acak + pembahasan untuk setiap topik
-materi.py      # Ringkasan materi & rumus Aritmatika Sosial
+main.py        # Tampilan (GUI Tkinter): menu, misi per tahap, hasil, materi, papan skor
+soal.py        # 4 misi sesuai kisi-kisi + generator soal acak + pembahasan per tahap
+permainan.py   # Logika permainan: alur misi/tahap, skor per tahap, nilai & predikat
+materi.py      # Ringkasan materi persentase untung dan rugi
 skor.py        # Simpan/muat papan skor (JSON)
 tests/         # Unit test
 ```
-
-Logika (`soal.py`, `permainan.py`) dipisahkan dari tampilan (`main.py`) sehingga
-mudah diuji dan dikembangkan, misalnya untuk menambah topik soal baru cukup membuat
-fungsi `soal_...()` di `soal.py` lalu mendaftarkannya di `GENERATOR_PER_LEVEL`.
-
-## Ide Pengembangan Selanjutnya
-
-- Mode cerita (pemain membuka "toko" dan modal bertambah dari jawaban benar)
-- Soal pilihan ganda untuk siswa yang lebih muda
-- Suara & animasi
-- Topik tambahan: bunga majemuk, komisi, cicilan
 
 ---
 Dibuat dengan bantuan VS Code + Claude Code.

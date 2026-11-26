@@ -1,18 +1,23 @@
-"""Ringkasan materi Aritmatika Sosial (SMP kelas VII)."""
+"""Ringkasan materi: Persentase Menghitung Untung dan Rugi."""
 
 MATERI = [
-    ("Untung dan Rugi", """\
+    ("Harga Beli & Harga Jual", """\
 Harga beli  = harga saat pedagang membeli barang (modal).
 Harga jual  = harga saat barang dijual kembali.
 
-• Jika harga jual > harga beli  → UNTUNG
+Langkah pertama setiap soal: IDENTIFIKASI dulu mana
+harga beli dan mana harga jual. Jangan sampai tertukar!
+"""),
+    ("Untung dan Rugi", """\
+• Harga jual > harga beli  → UNTUNG
       Untung = Harga jual − Harga beli
-• Jika harga jual < harga beli  → RUGI
+
+• Harga jual < harga beli  → RUGI
       Rugi = Harga beli − Harga jual
 
 Contoh:
-Beli sepeda Rp500.000, dijual Rp560.000.
-Untung = Rp560.000 − Rp500.000 = Rp60.000
+Sepeda dibeli Rp800.000, dijual Rp920.000.
+Untung = Rp920.000 − Rp800.000 = Rp120.000
 """),
     ("Persentase Untung/Rugi", """\
 Persentase selalu dihitung terhadap HARGA BELI.
@@ -20,72 +25,64 @@ Persentase selalu dihitung terhadap HARGA BELI.
   % Untung = (Untung ÷ Harga beli) × 100%
   % Rugi   = (Rugi ÷ Harga beli) × 100%
 
-Menentukan harga jual:
-  Untung p%  → Harga jual = (100% + p%) × Harga beli
-  Rugi p%    → Harga jual = (100% − p%) × Harga beli
+Contoh:
+Kipas angin dibeli Rp500.000, terjual Rp425.000.
+Rugi   = Rp500.000 − Rp425.000 = Rp75.000
+% Rugi = (75.000 ÷ 500.000) × 100% = 15%
+"""),
+    ("Menentukan Harga Jual", """\
+Jika ingin untung p% dari harga beli:
 
-Menentukan harga beli:
-  Untung p%  → Harga beli = (100 ÷ (100 + p)) × Harga jual
-  Rugi p%    → Harga beli = (100 ÷ (100 − p)) × Harga jual
+  1. Keuntungan = p% × Harga beli
+  2. Model     : Harga jual = Harga beli + Keuntungan
+  3. Substitusi nilai, lalu hitung.
 
 Contoh:
-Beli Rp200.000, untung 15%.
-Untung = 15% × Rp200.000 = Rp30.000
-Harga jual = Rp230.000
+Blender dibeli Rp250.000, ingin untung 20%.
+Keuntungan = 20% × Rp250.000 = Rp50.000
+Harga jual = Rp250.000 + Rp50.000 = Rp300.000
+
+Jika rugi p%: Harga jual = Harga beli − Kerugian
 """),
-    ("Diskon (Rabat)", """\
-Diskon = potongan harga, biasanya dalam persen dari harga awal.
-
-  Potongan    = Diskon% × Harga awal
-  Harga bayar = Harga awal − Potongan
-              = (100% − Diskon%) × Harga awal
-
-Diskon bertingkat, misal "20% + 10%":
-  Diskon kedua dihitung dari harga SETELAH diskon pertama.
-  Rp100.000 → diskon 20% → Rp80.000 → diskon 10% → Rp72.000
-  (Bukan diskon 30% = Rp70.000!)
-"""),
-    ("Pajak (PPN)", """\
-Pajak Pertambahan Nilai (PPN) ditambahkan ke harga barang.
-Tarif PPN di Indonesia saat ini: 11%.
-
-  PPN        = 11% × Harga sebelum pajak
-  Total bayar = Harga + PPN = 111% × Harga
+    ("Membandingkan Keuntungan", """\
+Untuk memilih penawaran TERBAIK, bandingkan
+PERSENTASE keuntungan, bukan besar rupiahnya.
 
 Contoh:
-Harga Rp200.000 → PPN = Rp22.000 → Total Rp222.000
+Toko A: beli Rp120.000, jual Rp150.000 → untung Rp30.000 = 25%
+Toko B: beli Rp140.000, jual Rp175.000 → untung Rp35.000 = 25%
+Toko C: beli Rp160.000, jual Rp192.000 → untung Rp32.000 = 20%
+
+Toko B untung rupiahnya paling besar, tetapi modalnya juga
+paling besar. Persentasenya sama dengan Toko A (25%).
 """),
-    ("Bunga Tunggal", """\
-Bunga tunggal: bunga dihitung dari modal awal saja (tidak berbunga lagi).
+    ("Kesalahan yang Sering Terjadi", """\
+✘ Membagi untung/rugi dengan HARGA JUAL.
+   Rugi Rp60.000, harga jual Rp340.000
+   → 60.000 ÷ 340.000 = 17,65%   (SALAH)
+   Yang benar dibagi harga beli Rp400.000
+   → 60.000 ÷ 400.000 = 15%      (BENAR)
 
-  Bunga n bulan = (n ÷ 12) × b% × M
-     M = modal/tabungan awal
-     b = suku bunga per tahun
-     n = lama menabung (bulan)
+✘ Memilih toko dengan untung rupiah terbesar sebagai
+   yang paling menguntungkan tanpa melihat persentasenya.
 
-  Tabungan akhir = M + Bunga
-
-Mencari lama menabung:
-  n = (Bunga ÷ (b% × M)) × 12
-
-Contoh:
-M = Rp1.200.000, bunga 6%/tahun, 8 bulan
-Bunga = (8/12) × 6% × Rp1.200.000 = Rp48.000
-Tabungan akhir = Rp1.248.000
+✘ Menjumlahkan harga beli dengan angka persen,
+   misal Rp250.000 + 20 (seharusnya + Rp50.000).
 """),
-    ("Bruto, Tara, Neto", """\
-Bruto = berat kotor (barang + wadah)
-Tara  = berat wadah/kemasan
-Neto  = berat bersih (barang saja)
+    ("Literasi Matematika", """\
+Soal dalam game ini disusun berdasarkan 4 indikator
+Mathematical Literacy:
 
-  Neto  = Bruto − Tara
-  Bruto = Neto + Tara
-  Tara  = Bruto − Neto
+1. Mathematical Reasoning
+   Membandingkan alternatif & memberi alasan.
+2. Formulating Situations Mathematically
+   Menerjemahkan situasi nyata menjadi model matematika.
+3. Employing Mathematical Concepts, Facts, and Procedures
+   Menggunakan konsep & prosedur untuk memperoleh solusi.
+4. Interpreting, Applying, and Evaluating Mathematical Outcomes
+   Menafsirkan & menilai kewajaran hasil perhitungan.
 
-Persentase tara:
-  Tara = %Tara × Bruto
-
-Contoh:
-Bruto 500 kg, tara 2% → Tara = 10 kg → Neto = 490 kg
+Setiap soal dikerjakan per TAHAP, dan setiap tahap
+memiliki skor (maksimum 6 per soal, total 24).
 """),
 ]

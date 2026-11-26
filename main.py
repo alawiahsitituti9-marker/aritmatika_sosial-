@@ -1,4 +1,4 @@
-"""Pasar Pintar — Game Edukasi Aritmatika Sosial.
+"""Pasar Pintar — Game Literasi Matematika: Persentase Untung dan Rugi.
 
 Jalankan dengan:  python main.py
 """
@@ -7,12 +7,14 @@ import tkinter as tk
 from tkinter import messagebox
 
 from materi import MATERI
-from permainan import DESKRIPSI_LEVEL, NAMA_LEVEL, WAKTU_PER_SOAL, Permainan
+from permainan import MODE, Permainan, bintang, predikat
 from skor import muat_skor, tambah_skor
-from soal import format_jawaban, parse_jawaban
+from soal import parse_angka
 
 BG = "#FFF8EC"
 KARTU = "#FFFFFF"
+LEMBUT = "#FFF1DC"
+GARIS = "#E8DCC8"
 TEKS = "#2D2A26"
 REDUP = "#7A7268"
 UTAMA = "#E07A1F"
@@ -20,36 +22,77 @@ HIJAU = "#2E9E5B"
 MERAH = "#D64545"
 BIRU = "#2F6FB3"
 UNGU = "#7A4FB5"
+WARNA_INDIKATOR = [BIRU, UNGU, HIJAU, MERAH]
 
 FONT = "Segoe UI"
+
+
+class AreaGulir(tk.Frame):
+    """Frame yang bisa di-scroll secara vertikal."""
+
+    def __init__(self, parent, bg=KARTU, **kw):
+        super().__init__(parent, bg=bg, **kw)
+        self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0)
+        bar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.isi = tk.Frame(self.canvas, bg=bg)
+        self.isi.bind("<Configure>",
+                      lambda _e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self._win = self.canvas.create_window((0, 0), window=self.isi, anchor="nw")
+        self.canvas.bind("<Configure>",
+                         lambda e: self.canvas.itemconfigure(self._win, width=e.width))
+        self.canvas.configure(yscrollcommand=bar.set)
+        self.canvas.pack(side="left", fill="both", expand=True)
+        bar.pack(side="right", fill="y")
+        self.bind_all("<MouseWheel>", self._roda, add="+")
+
+    def _roda(self, e):
+        try:
+            if self.winfo_exists() and str(e.widget).startswith(str(self)):
+                self.canvas.yview_scroll(int(-e.delta / 120), "units")
+        except tk.TclError:
+            pass
+
+    def ke_atas(self):
+        self.canvas.yview_moveto(0)
 
 
 class Aplikasi(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Pasar Pintar — Game Aritmatika Sosial")
-        self.geometry("860x620")
-        self.minsize(760, 560)
+        self.title("Pasar Pintar — Literasi Matematika Untung & Rugi")
+        # Sesuaikan ukuran dengan skala layar (mis. Windows 125%/150%)
+        self.skala = max(1.0, self.winfo_fpixels("1i") / 96)
+        lebar_layar, tinggi_layar = self.winfo_screenwidth(), self.winfo_screenheight()
+        w = min(self.px(1080), lebar_layar - 40)
+        h = min(self.px(720), tinggi_layar - 80)
+        self.geometry(f"{w}x{h}")
+        self.minsize(min(self.px(900), w), min(self.px(600), h))
+        if w < self.px(1080) or h < self.px(720):
+            try:
+                self.state("zoomed")  # layar kecil: maksimalkan jendela
+            except tk.TclError:
+                pass
         self.configure(bg=BG)
 
         self.nama = tk.StringVar(value="Pemain")
         self.permainan: Permainan | None = None
         self.layar: tk.Frame | None = None
-        self.timer_id = None
-        self.sisa_waktu = 0
         self.sudah_dijawab = False
 
         self.tampil_menu()
 
     # ------------------------------------------------------------ helper UI --
 
+    def px(self, n: int) -> int:
+        """Ubah ukuran piksel desain (skala 100%) ke piksel layar sebenarnya."""
+        return int(n * getattr(self, "skala", 1.0))
+
     def ganti_layar(self) -> tk.Frame:
-        self.hentikan_timer()
         self.unbind("<Return>")
         if self.layar is not None:
             self.layar.destroy()
         self.layar = tk.Frame(self, bg=BG)
-        self.layar.pack(fill="both", expand=True, padx=28, pady=22)
+        self.layar.pack(fill="both", expand=True, padx=24, pady=18)
         return self.layar
 
     @staticmethod
@@ -61,6 +104,7 @@ class Aplikasi(tk.Tk):
     def tombol(parent, text, command, warna=UTAMA, size=13, width=None):
         return tk.Button(parent, text=text, command=command, bg=warna, fg="white",
                          activebackground=TEKS, activeforeground="white",
+                         disabledforeground="#EEEEEE",
                          relief="flat", bd=0, cursor="hand2", padx=18, pady=8,
                          width=width, font=(FONT, size, "bold"))
 
@@ -68,194 +112,234 @@ class Aplikasi(tk.Tk):
 
     def tampil_menu(self):
         f = self.ganti_layar()
-        self.label(f, "🛒", size=48).pack(pady=(10, 0))
+        self.label(f, "🛒", size=46).pack(pady=(6, 0))
         self.label(f, "Pasar Pintar", size=32, bold=True, fg=UTAMA).pack()
-        self.label(f, "Game Edukasi Aritmatika Sosial", size=14, fg=REDUP).pack(pady=(0, 24))
+        self.label(f, "Game Literasi Matematika — Persentase Untung dan Rugi",
+                   size=14, fg=REDUP).pack(pady=(0, 20))
 
         baris = tk.Frame(f, bg=BG)
-        baris.pack(pady=(0, 18))
+        baris.pack(pady=(0, 16))
         self.label(baris, "Nama pemain:", size=12).pack(side="left", padx=(0, 8))
-        tk.Entry(baris, textvariable=self.nama, font=(FONT, 12), width=20,
+        tk.Entry(baris, textvariable=self.nama, font=(FONT, 12), width=22,
                  relief="solid", bd=1).pack(side="left")
 
         for teks, cmd, warna in [
-            ("▶  Mulai Bermain", self.tampil_pilih_level, UTAMA),
+            ("📝  Soal Kisi-kisi (4 Misi)", lambda: self.mulai("kisi"), UTAMA),
+            ("🎲  Latihan Soal Acak", lambda: self.mulai("acak"), HIJAU),
             ("📖  Pelajari Materi", self.tampil_materi, BIRU),
             ("🏆  Papan Skor", self.tampil_papan_skor, UNGU),
             ("✖  Keluar", self.destroy, REDUP),
         ]:
-            self.tombol(f, teks, cmd, warna, width=20).pack(pady=6)
+            self.tombol(f, teks, cmd, warna, width=24).pack(pady=5)
 
-    # --------------------------------------------------------- pilih level --
-
-    def tampil_pilih_level(self):
-        if not self.nama.get().strip():
-            self.nama.set("Pemain")
-        f = self.ganti_layar()
-        self.label(f, "Pilih Level", size=24, bold=True, fg=UTAMA).pack(pady=(10, 4))
-        self.label(f, f"10 soal • 3 nyawa • {WAKTU_PER_SOAL} detik per soal",
-                   fg=REDUP).pack(pady=(0, 20))
-
-        for level, warna in [(1, HIJAU), (2, BIRU), (3, MERAH)]:
-            kartu = tk.Frame(f, bg=KARTU, highlightbackground="#E8DCC8", highlightthickness=1)
-            kartu.pack(fill="x", padx=60, pady=8)
-            teks = tk.Frame(kartu, bg=KARTU)
-            teks.pack(side="left", fill="x", expand=True, padx=16, pady=12)
-            self.label(teks, f"Level {level} — {NAMA_LEVEL[level]}", size=14, bold=True,
-                       bg=KARTU, anchor="w").pack(fill="x")
-            self.label(teks, DESKRIPSI_LEVEL[level], size=11, fg=REDUP, bg=KARTU,
-                       anchor="w").pack(fill="x")
-            self.tombol(kartu, "Main", lambda lv=level: self.mulai(lv), warna,
-                        size=12).pack(side="right", padx=16)
-
-        self.tombol(f, "← Kembali", self.tampil_menu, REDUP, size=11).pack(pady=20)
+        self.label(f, "4 misi sesuai indikator Mathematical Literacy • dikerjakan per tahap • "
+                      "skor maksimum 6 per misi", size=10, fg=REDUP).pack(pady=(16, 0))
 
     # ---------------------------------------------------------------- game --
 
-    def mulai(self, level: int):
-        self.permainan = Permainan(level)
-        self.bangun_layar_game()
-        self.soal_berikutnya()
+    def mulai(self, mode: str):
+        if not self.nama.get().strip():
+            self.nama.set("Pemain")
+        self.permainan = Permainan(mode)
+        self.bangun_layar_misi()
 
-    def bangun_layar_game(self):
+    def bangun_layar_misi(self):
+        p = self.permainan
+        m = p.misi_sekarang
+        warna = WARNA_INDIKATOR[(m.nomor - 1) % len(WARNA_INDIKATOR)]
         f = self.ganti_layar()
 
+        # bar atas
         atas = tk.Frame(f, bg=BG)
         atas.pack(fill="x")
-        self.lbl_info = self.label(atas, "", size=12, bold=True)
-        self.lbl_info.pack(side="left")
-        self.lbl_waktu = self.label(atas, "", size=12, bold=True, fg=BIRU)
-        self.lbl_waktu.pack(side="right")
-        self.lbl_nyawa = self.label(atas, "", size=14, fg=MERAH)
-        self.lbl_nyawa.pack(side="right", padx=16)
+        self.label(atas, f"Misi {p.i_misi + 1} dari {len(p.misi)}  •  {MODE[p.mode]}",
+                   size=12, bold=True).pack(side="left")
+        self.tombol(atas, "Menu", self.konfirmasi_keluar, REDUP, size=10).pack(side="right")
         self.lbl_skor = self.label(atas, "", size=12, bold=True, fg=UTAMA)
         self.lbl_skor.pack(side="right", padx=16)
 
-        self.progres = tk.Canvas(f, height=8, bg="#EFE4D2", highlightthickness=0)
-        self.progres.pack(fill="x", pady=(8, 16))
+        badan = tk.Frame(f, bg=BG)
+        badan.pack(fill="both", expand=True, pady=(12, 0))
 
-        kartu = tk.Frame(f, bg=KARTU, highlightbackground="#E8DCC8", highlightthickness=1)
-        kartu.pack(fill="both", expand=True)
-        isi = tk.Frame(kartu, bg=KARTU)
-        isi.pack(fill="both", expand=True, padx=24, pady=18)
+        # panel kiri: indikator, soal, daftar tahapan
+        kiri = tk.Frame(badan, bg=KARTU, highlightbackground=GARIS, highlightthickness=1,
+                        width=self.px(400))
+        kiri.pack(side="left", fill="y")
+        kiri.pack_propagate(False)
+        dalam = tk.Frame(kiri, bg=KARTU)
+        dalam.pack(fill="both", expand=True, padx=16, pady=14)
+        tk.Label(dalam, text=f"INDIKATOR {m.nomor}: {m.indikator.upper()}", bg=warna,
+                 fg="white", font=(FONT, 9, "bold"), padx=8, pady=3, wraplength=self.px(350),
+                 justify="left").pack(anchor="w")
+        self.label(dalam, m.deskripsi_indikator, size=9, fg=REDUP, bg=KARTU,
+                   wraplength=self.px(360), justify="left").pack(anchor="w", pady=(4, 10))
+        self.label(dalam, m.judul, size=14, bold=True, bg=KARTU, wraplength=self.px(360),
+                   justify="left").pack(anchor="w")
+        self.label(dalam, m.soal, size=11, bg=KARTU, wraplength=self.px(360),
+                   justify="left").pack(anchor="w", pady=(6, 12))
 
-        self.lbl_topik = tk.Label(isi, text="", bg=UTAMA, fg="white",
-                                  font=(FONT, 10, "bold"), padx=10, pady=2)
-        self.lbl_topik.pack(anchor="w")
-        self.lbl_soal = self.label(isi, "", size=14, bg=KARTU, justify="left",
-                                   anchor="w", wraplength=740)
-        self.lbl_soal.pack(fill="x", pady=(12, 16))
+        self.label(dalam, "Tahapan Penyelesaian", size=10, bold=True, fg=REDUP,
+                   bg=KARTU).pack(anchor="w")
+        self.lbl_tahapan = []
+        for t in m.tahapan:
+            lbl = self.label(dalam, "", size=10, bg=KARTU, anchor="w", justify="left",
+                             wraplength=self.px(360))
+            lbl.pack(fill="x")
+            self.lbl_tahapan.append(lbl)
 
-        baris = tk.Frame(isi, bg=KARTU)
-        baris.pack(fill="x")
-        self.label(baris, "Jawaban:", size=12, bg=KARTU).pack(side="left")
-        self.entry = tk.Entry(baris, font=(FONT, 14), width=18, relief="solid", bd=1)
-        self.entry.pack(side="left", padx=10)
-        self.lbl_satuan = self.label(baris, "", size=12, fg=REDUP, bg=KARTU)
-        self.lbl_satuan.pack(side="left")
-        self.btn_jawab = self.tombol(baris, "Jawab", self.periksa, HIJAU, size=12)
-        self.btn_jawab.pack(side="left", padx=14)
-
-        self.lbl_hasil = self.label(isi, "", size=14, bold=True, bg=KARTU, anchor="w")
-        self.lbl_hasil.pack(fill="x", pady=(16, 4))
-        self.lbl_bahas = self.label(isi, "", size=12, fg=TEKS, bg=KARTU, justify="left",
-                                    anchor="w", wraplength=740)
-        self.lbl_bahas.pack(fill="x")
+        # panel kanan: pengerjaan tahap
+        self.gulir = AreaGulir(badan)
+        self.gulir.pack(side="left", fill="both", expand=True, padx=(14, 0))
+        self.gulir.configure(highlightbackground=GARIS, highlightthickness=1)
 
         bawah = tk.Frame(f, bg=BG)
-        bawah.pack(fill="x", pady=(14, 0))
-        self.tombol(bawah, "Menyerah & ke Menu", self.konfirmasi_keluar, REDUP,
-                    size=10).pack(side="left")
-        self.btn_lanjut = self.tombol(bawah, "Soal Berikutnya →", self.lanjut, UTAMA, size=12)
+        bawah.pack(fill="x", pady=(12, 0))
+        self.btn_periksa = self.tombol(bawah, "Periksa Jawaban", self.periksa, HIJAU, size=12)
+        self.btn_periksa.pack(side="left")
+        self.btn_lanjut = self.tombol(bawah, "Lanjut →", self.lanjut, UTAMA, size=12)
         self.btn_lanjut.pack(side="right")
 
         self.bind("<Return>", lambda _e: self.lanjut() if self.sudah_dijawab else self.periksa())
+        self.tampil_tahap()
 
     def perbarui_status(self):
         p = self.permainan
-        self.lbl_info.config(text=f"Level {p.level} • Soal {p.nomor}/{p.jumlah_soal}")
-        self.lbl_skor.config(text=f"⭐ {p.skor}")
-        self.lbl_nyawa.config(text="♥" * p.nyawa + "♡" * (3 - p.nyawa))
-        self.progres.update_idletasks()
-        lebar = self.progres.winfo_width()
-        self.progres.delete("all")
-        self.progres.create_rectangle(0, 0, lebar * p.nomor / p.jumlah_soal, 8,
-                                      fill=UTAMA, width=0)
+        self.lbl_skor.config(text=f"⭐ Skor: {p.skor} / {p.skor_maks}")
+        m = p.misi_sekarang
+        for i, (t, lbl) in enumerate(zip(m.tahapan, self.lbl_tahapan)):
+            s = p.skor_tahap[p.i_misi][i]
+            judul = t.judul.split(":", 1)[0]
+            if s is None:
+                tanda, warna = ("▶" if i == p.i_tahap else "○"), (UTAMA if i == p.i_tahap else REDUP)
+                teks = f"{tanda} {judul} — skor {t.skor}"
+            else:
+                tanda, warna = ("✔", HIJAU) if s == t.skor else ("✘", MERAH)
+                teks = f"{tanda} {judul} — {s}/{t.skor}"
+            lbl.config(text=teks, fg=warna,
+                       font=(FONT, 10, "bold" if i == p.i_tahap else "normal"))
 
-    def soal_berikutnya(self):
-        soal = self.permainan.soal_berikutnya()
+    def tampil_tahap(self):
+        p = self.permainan
+        t = p.tahap_sekarang
         self.sudah_dijawab = False
-        self.lbl_topik.config(text=soal.topik.upper())
-        self.lbl_soal.config(text=soal.pertanyaan)
-        satuan = {"Rp": "(rupiah)", "%": "(persen)", "kg": "kg", "bulan": "bulan"}
-        self.lbl_satuan.config(text=satuan.get(soal.satuan, soal.satuan))
-        self.lbl_hasil.config(text="")
-        self.lbl_bahas.config(text="")
-        self.entry.config(state="normal")
-        self.entry.delete(0, "end")
-        self.entry.focus_set()
-        self.btn_jawab.config(state="normal")
-        self.btn_lanjut.config(state="disabled")
+        isi = self.gulir.isi
+        for w in isi.winfo_children():
+            w.destroy()
+        self.gulir.ke_atas()
+
+        wadah = tk.Frame(isi, bg=KARTU)
+        wadah.pack(fill="both", expand=True, padx=22, pady=18)
+        self.label(wadah, t.judul, size=15, bold=True, fg=UTAMA, bg=KARTU, wraplength=self.px(560),
+                   justify="left").pack(anchor="w")
+        self.label(wadah, f"Skor tahap ini: {t.skor}", size=10, fg=REDUP,
+                   bg=KARTU).pack(anchor="w")
+        self.label(wadah, t.perintah, size=12, bg=KARTU, wraplength=self.px(560),
+                   justify="left").pack(anchor="w", pady=(10, 12))
+
+        self.entri, self.lbl_butir, self.radio = [], [], []
+        if t.jenis == "isian":
+            for i, s in enumerate(t.isian):
+                baris = tk.Frame(wadah, bg=KARTU)
+                baris.pack(fill="x", pady=4)
+                self.label(baris, s.label, size=11, bg=KARTU, width=28,
+                           anchor="w").pack(side="left")
+                if s.satuan == "Rp":
+                    self.label(baris, "Rp", size=11, fg=REDUP, bg=KARTU).pack(side="left")
+                e = tk.Entry(baris, font=(FONT, 13), width=14, relief="solid", bd=1)
+                e.pack(side="left", padx=6)
+                if s.satuan == "%":
+                    self.label(baris, "%", size=11, fg=REDUP, bg=KARTU).pack(side="left")
+                hasil = self.label(baris, "", size=11, bold=True, bg=KARTU)
+                hasil.pack(side="left", padx=8)
+                self.entri.append(e)
+                self.lbl_butir.append(hasil)
+            self.entri[0].focus_set()
+            self.label(wadah, "Tulis angka saja, misal 30000 atau 30.000; desimal pakai koma "
+                              "(17,65).", size=9, fg=REDUP, bg=KARTU).pack(anchor="w", pady=(4, 0))
+        else:
+            self.pilih = tk.IntVar(value=-1)
+            for i, teks in enumerate(t.pilihan):
+                rb = tk.Radiobutton(wadah, text=f"{'ABCD'[i]}.  {teks}", variable=self.pilih,
+                                    value=i, bg=LEMBUT, fg=TEKS, activebackground=LEMBUT,
+                                    selectcolor=KARTU, anchor="w", justify="left",
+                                    wraplength=self.px(540), font=(FONT, 11), padx=10, pady=6,
+                                    relief="flat", cursor="hand2")
+                rb.pack(fill="x", pady=3)
+                self.radio.append(rb)
+            self.focus_set()
+
+        self.lbl_hasil = self.label(wadah, "", size=13, bold=True, bg=KARTU, anchor="w")
+        self.lbl_hasil.pack(fill="x", pady=(14, 4))
+        self.lbl_bahas = tk.Label(wadah, text="", bg=KARTU, fg=TEKS, font=(FONT, 11),
+                                  justify="left", anchor="w", wraplength=self.px(560))
+        self.lbl_bahas.pack(fill="x")
+
+        self.btn_periksa.config(state="normal")
+        self.btn_lanjut.config(state="disabled", text="Lanjut →")
         self.perbarui_status()
-        self.sisa_waktu = WAKTU_PER_SOAL
-        self.detik()
-
-    def detik(self):
-        self.lbl_waktu.config(text=f"⏱ {self.sisa_waktu} dtk",
-                              fg=MERAH if self.sisa_waktu <= 10 else BIRU)
-        if self.sisa_waktu <= 0:
-            self.timer_id = None
-            self.tampilkan_hasil(None)
-            return
-        self.sisa_waktu -= 1
-        self.timer_id = self.after(1000, self.detik)
-
-    def hentikan_timer(self):
-        if self.timer_id is not None:
-            self.after_cancel(self.timer_id)
-            self.timer_id = None
 
     def periksa(self):
         if self.sudah_dijawab:
             return
-        teks = self.entry.get()
-        if parse_jawaban(teks) is None:
-            self.lbl_hasil.config(text="Masukkan jawaban berupa angka, misal 15000 atau 15.000",
-                                  fg=REDUP)
-            return
-        self.tampilkan_hasil(teks)
-
-    def tampilkan_hasil(self, teks):
-        self.hentikan_timer()
-        self.sudah_dijawab = True
         p = self.permainan
-        soal = p.soal
-        hasil = p.jawab(teks, self.sisa_waktu)
-        kunci = format_jawaban(soal.jawaban, soal.satuan)
+        t = p.tahap_sekarang
+        if t.jenis == "isian":
+            jawaban = [e.get() for e in self.entri]
+            if any(parse_angka(j) is None for j in jawaban):
+                self.lbl_hasil.config(text="Isi semua kotak dengan angka terlebih dahulu.",
+                                      fg=REDUP)
+                return
+        else:
+            jawaban = self.pilih.get()
+            if jawaban < 0:
+                self.lbl_hasil.config(text="Pilih salah satu jawaban terlebih dahulu.", fg=REDUP)
+                return
+
+        hasil = p.jawab(jawaban)
+        self.sudah_dijawab = True
+
+        if t.jenis == "isian":
+            for e, lbl, ok, s in zip(self.entri, self.lbl_butir, hasil.per_butir, t.isian):
+                e.config(state="disabled")
+                lbl.config(text="✔" if ok else f"✘  {s.kunci()}", fg=HIJAU if ok else MERAH)
+        else:
+            for i, rb in enumerate(self.radio):
+                rb.config(state="disabled")
+                if i == t.kunci_pilihan:
+                    rb.config(bg="#DFF3E6", disabledforeground=HIJAU)
+                elif i == jawaban:
+                    rb.config(bg="#FBE3E3", disabledforeground=MERAH)
+                else:
+                    rb.config(disabledforeground=REDUP)
 
         if hasil.benar:
-            bonus = f"  (beruntun {p.beruntun}x 🔥)" if p.beruntun >= 2 else ""
-            self.lbl_hasil.config(text=f"✔ Benar! +{hasil.poin} poin{bonus}", fg=HIJAU)
-        elif teks is None:
-            self.lbl_hasil.config(text=f"⏰ Waktu habis! Jawaban: {kunci}", fg=MERAH)
+            self.lbl_hasil.config(text=f"✔ Tepat! +{hasil.skor} skor", fg=HIJAU)
         else:
-            self.lbl_hasil.config(text=f"✘ Kurang tepat. Jawaban yang benar: {kunci}", fg=MERAH)
+            self.lbl_hasil.config(text=f"✘ Belum tepat (0/{t.skor}). Pelajari pembahasannya:",
+                                  fg=MERAH)
+        self.lbl_bahas.config(text="Pembahasan:\n" + t.penjelasan)
 
-        self.lbl_bahas.config(text="Pembahasan:\n" + soal.pembahasan)
-        self.entry.config(state="disabled")
-        self.btn_jawab.config(state="disabled")
-        self.btn_lanjut.config(state="normal",
-                               text="Lihat Hasil →" if p.selesai else "Soal Berikutnya →")
+        self.btn_periksa.config(state="disabled")
+        if p.tahap_terakhir:
+            teks = "Lihat Hasil Akhir →" if p.misi_terakhir else "Misi Berikutnya →"
+        else:
+            teks = "Tahap Berikutnya →"
+        self.btn_lanjut.config(state="normal", text=teks)
         self.btn_lanjut.focus_set()
         self.perbarui_status()
 
     def lanjut(self):
         if not self.sudah_dijawab:
             return
-        if self.permainan.selesai:
+        p = self.permainan
+        akhir_misi = p.tahap_terakhir
+        p.maju()
+        if p.selesai:
             self.tampil_hasil_akhir()
+        elif akhir_misi:
+            self.bangun_layar_misi()
         else:
-            self.soal_berikutnya()
+            self.tampil_tahap()
 
     def konfirmasi_keluar(self):
         if messagebox.askyesno("Keluar", "Akhiri permainan dan kembali ke menu?"):
@@ -266,41 +350,52 @@ class Aplikasi(tk.Tk):
     def tampil_hasil_akhir(self):
         p = self.permainan
         nama = self.nama.get().strip() or "Pemain"
-        peringkat = tambah_skor(nama, p.skor, p.level, p.jumlah_benar)
+        peringkat = tambah_skor(nama, p.nilai, p.skor, MODE[p.mode])
 
         f = self.ganti_layar()
-        rasio = p.jumlah_benar / p.nomor if p.nomor else 0
-        if rasio >= 0.9:
-            emoji, pesan = "🏆", "Luar biasa! Kamu siap jadi juragan pasar!"
-        elif rasio >= 0.7:
-            emoji, pesan = "🎉", "Hebat! Pemahamanmu sudah bagus."
-        elif rasio >= 0.5:
-            emoji, pesan = "👍", "Lumayan! Terus berlatih, ya."
-        else:
-            emoji, pesan = "📚", "Yuk, baca materi dulu lalu coba lagi!"
+        self.label(f, "🏆" if p.nilai >= 75 else "📚", size=44).pack(pady=(4, 0))
+        self.label(f, "Semua Misi Selesai!", size=24, bold=True, fg=UTAMA).pack()
+        self.label(f, f"Nilai {nama}: {p.nilai}", size=28, bold=True).pack(pady=(6, 0))
+        self.label(f, f"Skor {p.skor} dari {p.skor_maks}  •  Predikat {predikat(p.nilai)}",
+                   size=13, fg=REDUP).pack(pady=(0, 14))
 
-        self.label(f, emoji, size=56).pack(pady=(20, 0))
-        judul = "Permainan Selesai!" if p.nyawa > 0 else "Nyawa Habis!"
-        self.label(f, judul, size=26, bold=True, fg=UTAMA).pack()
-        self.label(f, pesan, size=13, fg=REDUP).pack(pady=(4, 20))
-        self.label(f, f"Skor: {p.skor}", size=30, bold=True).pack()
-        self.label(f, f"Benar {p.jumlah_benar} dari {p.nomor} soal • "
-                      f"Level {p.level} ({NAMA_LEVEL[p.level]})", size=12).pack(pady=4)
+        tabel = tk.Frame(f, bg=KARTU, highlightbackground=GARIS, highlightthickness=1)
+        tabel.pack(fill="x", padx=80)
+        for c, k in enumerate(["No", "Indikator", "Soal", "Skor", "Capaian"]):
+            self.label(tabel, k, size=10, bold=True, fg=REDUP, bg=KARTU).grid(
+                row=0, column=c, padx=10, pady=6, sticky="w")
+        tabel.grid_columnconfigure(1, weight=1)
+        for r, m in enumerate(p.misi, start=1):
+            s = p.skor_misi(r - 1)
+            b = bintang(s, m.skor_maks)
+            nilai = [m.nomor, m.indikator, m.judul, f"{s} / {m.skor_maks}",
+                     "★" * b + "☆" * (3 - b)]
+            for c, v in enumerate(nilai):
+                self.label(tabel, str(v), size=10, bg=KARTU, wraplength=self.px(330) if c in (1, 2) else 0,
+                           justify="left", fg=UTAMA if c == 4 else TEKS).grid(
+                    row=r, column=c, padx=10, pady=4, sticky="w")
+
+        lemah = [m.indikator for i, m in enumerate(p.misi) if p.skor_misi(i) < m.skor_maks]
+        saran = ("Sempurna! Semua indikator literasi matematika tercapai."
+                 if not lemah else
+                 "Perlu latihan lagi pada: " + "; ".join(lemah) + ".")
+        self.label(f, saran, size=11, fg=TEKS, wraplength=self.px(820)).pack(pady=(12, 2))
         if peringkat:
             self.label(f, f"Kamu masuk papan skor di peringkat #{peringkat}!",
-                       size=12, bold=True, fg=UNGU).pack(pady=4)
+                       size=11, bold=True, fg=UNGU).pack()
 
         tombol = tk.Frame(f, bg=BG)
-        tombol.pack(pady=24)
-        self.tombol(tombol, "Main Lagi", lambda: self.mulai(p.level), HIJAU).pack(side="left", padx=6)
-        self.tombol(tombol, "Pilih Level", self.tampil_pilih_level, BIRU).pack(side="left", padx=6)
+        tombol.pack(pady=14)
+        self.tombol(tombol, "Ulangi", lambda: self.mulai(p.mode), HIJAU).pack(side="left", padx=6)
+        self.tombol(tombol, "Latihan Acak", lambda: self.mulai("acak"), BIRU).pack(side="left", padx=6)
         self.tombol(tombol, "Menu", self.tampil_menu, REDUP).pack(side="left", padx=6)
 
     # --------------------------------------------------------------- materi --
 
     def tampil_materi(self):
         f = self.ganti_layar()
-        self.label(f, "📖 Materi Aritmatika Sosial", size=22, bold=True, fg=BIRU).pack(anchor="w")
+        self.label(f, "📖 Materi: Persentase Untung dan Rugi", size=22, bold=True,
+                   fg=BIRU).pack(anchor="w")
 
         badan = tk.Frame(f, bg=BG)
         badan.pack(fill="both", expand=True, pady=12)
@@ -309,7 +404,7 @@ class Aplikasi(tk.Tk):
 
         teks = tk.Text(badan, wrap="word", font=("Consolas", 12), bg=KARTU, fg=TEKS,
                        relief="flat", padx=18, pady=14, highlightthickness=1,
-                       highlightbackground="#E8DCC8")
+                       highlightbackground=GARIS)
         teks.pack(side="left", fill="both", expand=True)
 
         def tampilkan(i):
@@ -323,7 +418,7 @@ class Aplikasi(tk.Tk):
 
         for i, (judul, _) in enumerate(MATERI):
             tk.Button(daftar, text=judul, command=lambda i=i: tampilkan(i), anchor="w",
-                      bg=KARTU, fg=TEKS, relief="flat", cursor="hand2", width=22,
+                      bg=KARTU, fg=TEKS, relief="flat", cursor="hand2", width=26,
                       font=(FONT, 11), padx=10, pady=6).pack(fill="x", pady=2)
         tampilkan(0)
 
@@ -335,9 +430,9 @@ class Aplikasi(tk.Tk):
         f = self.ganti_layar()
         self.label(f, "🏆 Papan Skor", size=22, bold=True, fg=UNGU).pack(pady=(10, 16))
 
-        tabel = tk.Frame(f, bg=KARTU, highlightbackground="#E8DCC8", highlightthickness=1)
+        tabel = tk.Frame(f, bg=KARTU, highlightbackground=GARIS, highlightthickness=1)
         tabel.pack(fill="x", padx=60)
-        kolom = ["#", "Nama", "Skor", "Level", "Benar", "Tanggal"]
+        kolom = ["#", "Nama", "Nilai", "Skor", "Mode", "Tanggal"]
         for c, k in enumerate(kolom):
             self.label(tabel, k, size=11, bold=True, fg=REDUP, bg=KARTU).grid(
                 row=0, column=c, padx=12, pady=8, sticky="w")
@@ -348,8 +443,8 @@ class Aplikasi(tk.Tk):
             self.label(tabel, "Belum ada skor. Ayo main!", bg=KARTU, fg=REDUP).grid(
                 row=1, column=0, columnspan=len(kolom), pady=16)
         for r, e in enumerate(data, start=1):
-            nilai = [r, e.get("nama", "-"), e.get("skor", 0), e.get("level", "-"),
-                     e.get("benar", "-"), e.get("tanggal", "-")]
+            nilai = [r, e.get("nama", "-"), e.get("nilai", "-"), f"{e.get('skor', '-')}/24",
+                     e.get("mode", "-"), e.get("tanggal", "-")]
             for c, v in enumerate(nilai):
                 self.label(tabel, str(v), size=11, bg=KARTU, bold=(c == 2)).grid(
                     row=r, column=c, padx=12, pady=4, sticky="w")
