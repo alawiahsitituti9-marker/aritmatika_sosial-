@@ -2,10 +2,17 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UntungCerdas</title>
 <meta name="description" content="Game literasi matematika persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT) dan tutor AI Google Gemini. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1E6FD9">
+<link rel="icon" type="image/png" sizes="192x192" href="ikon/ikon-192.png">
+<link rel="apple-touch-icon" href="ikon/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="UntungCerdas">
+<meta name="apple-mobile-web-app-status-bar-style" content="default"><text y='.9em' font-size='90'>🛒</text></svg>">
 <style>
   :root {
     --bg: #EEF5FD; --kartu: #FFFFFF; --lembut: #E3EEFB; --garis: #C9DCF2;
@@ -94,6 +101,8 @@
   @keyframes putar { to { transform: rotate(360deg); } }
   .catatan { margin-top: 28px; }
   .tersembunyi { display: none !important; }
+  .tombol.instal { background: #FFB020; color: #1C2B3A; }
+  @media (display-mode: standalone) { .wadah { padding-top: max(20px, env(safe-area-inset-top)); } }
   .rmt-kotak { background: var(--lembut); border-radius: 8px; padding: 8px 12px; margin: 8px 0 4px; font-size: .88rem; }
   .rmt-kotak b { color: var(--biru); }
   .mediasi { white-space: pre-line; background: color-mix(in srgb, var(--nila) 12%, var(--kartu)); border-left: 4px solid var(--nila); border-radius: 8px; padding: 10px 12px; margin: 6px 0; }
@@ -116,7 +125,7 @@
   <div class="tengah muat">
     <div class="spinner"></div>
     <p><b>Memuat UntungCerdas…</b></p>
-    <p class="kecil">Menyiapkan Python di browser (sekitar 5–20 detik pada pembukaan pertama).</p>
+    <p class="kecil">Menyiapkan Python di browser (sekitar 5–20 detik pada pembukaan pertama, berikutnya lebih cepat).</p>
   </div>
 </main>
 
@@ -135,6 +144,32 @@ const $ = id => document.getElementById(id);
 function simpanLokal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function bacaLokal(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
 const cfgAI = () => { const c = bacaLokal("uc-ai", { penyedia: "gemini", api_key: "", model: "" }); if (c.penyedia !== "gemini") { c.penyedia = "gemini"; c.api_key = ""; c.model = ""; } return c; };
+
+/* ---------------------------------------------- aplikasi terinstal (PWA) */
+let promptInstal = null;
+const sudahTerpasang = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const perangkatIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+if ("serviceWorker" in navigator) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); promptInstal = e; perbaruiInstal(); });
+addEventListener("appinstalled", () => { promptInstal = null; perbaruiInstal(); });
+
+function htmlInstal() {
+  if (sudahTerpasang()) return '<p class="kecil">✅ UntungCerdas berjalan sebagai aplikasi.</p>';
+  if (promptInstal) return '<button class="tombol instal" onclick="instal()">📲 Instal Aplikasi</button>';
+  if (perangkatIOS) return '<p class="kecil">📲 Pasang di iPhone/iPad: ketuk tombol <b>Bagikan</b> (kotak dengan panah) lalu pilih <b>Tambahkan ke Layar Utama</b>.</p>';
+  return '<p class="kecil">📲 Pasang sebagai aplikasi: buka menu browser (⋮) lalu pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>.</p>';
+}
+function perbaruiInstal() { const el = $("area-instal"); if (el) el.innerHTML = htmlInstal(); }
+async function instal() {
+  if (!promptInstal) return;
+  promptInstal.prompt();
+  await promptInstal.userChoice;
+  promptInstal = null;
+  perbaruiInstal();
+}
 
 async function mulaiPython() {
   try {
@@ -170,6 +205,7 @@ function menu() {
         <button class="tombol nila" onclick="papanSkor()">🏆 Papan Skor</button>
         <button class="tombol langit" onclick="pengaturanAI()">⚙️ Pengaturan AI</button>
       </div>
+      <div id="area-instal" style="margin-top:14px">${htmlInstal()}</div>
       <p class="kecil" style="margin-top:14px;color:${ai.api_key ? "var(--utama)" : "var(--redup)"}">
         ${ai.api_key ? "🤖 Tutor AI aktif (" + esc(penyedia[ai.penyedia]?.nama || ai.penyedia) + ")"
                      : "🤖 Tutor AI belum aktif — isi API key di ⚙️ Pengaturan AI"}</p>
@@ -497,6 +533,7 @@ async function kirimAI(req, key) {
     }
     if ((terakhir.kode === 400 || terakhir.kode === 404) && utama) terakhir = utama;
   } catch (e) {
+    if (!navigator.onLine) return "⚠️ Kamu sedang offline. Fitur AI butuh internet — fitur lain (mediasi 🧭, soal, materi) tetap bisa dipakai.";
     return "⚠️ Tidak dapat terhubung ke server AI. Periksa koneksi internet, lalu coba lagi.";
   }
   let pesan = api.galat_http(terakhir.kode, terakhir.isi);

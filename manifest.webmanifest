@@ -1,0 +1,19 @@
+{
+  "name": "UntungCerdas — Literasi Matematika Untung & Rugi",
+  "short_name": "UntungCerdas",
+  "description": "Game literasi matematika persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT) dan tutor AI Google Gemini.",
+  "lang": "id",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EEF5FD",
+  "theme_color": "#1E6FD9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "ikon/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

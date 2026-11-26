@@ -14,6 +14,21 @@ Siswa berperan sebagai pedagang dan menyelesaikan soal-soal untung dan rugi
 Bisa dibuka di laptop maupun HP tanpa instalasi apa pun. Pembukaan pertama memerlukan
 sekitar 5–20 detik untuk memuat Python di browser.
 
+### 📲 Instal sebagai Aplikasi (Android, iPhone, Laptop)
+
+UntungCerdas bisa **dipasang seperti aplikasi**: ada ikon di layar utama, terbuka layar penuh
+tanpa tampilan browser, dan **tetap bisa dipakai offline** setelah dibuka sekali (fitur AI tetap
+butuh internet).
+
+| Perangkat | Cara memasang |
+|---|---|
+| **Android (Chrome)** | Buka link, lalu ketuk tombol **📲 Instal Aplikasi** di menu. Bisa juga lewat menu **⋮ → Instal aplikasi / Tambahkan ke layar utama**. |
+| **iPhone/iPad (Safari)** | Buka link, ketuk **Bagikan** (kotak dengan panah), lalu pilih **Tambahkan ke Layar Utama**. |
+| **Laptop (Chrome/Edge)** | Buka link, lalu klik tombol **📲 Instal Aplikasi** atau ikon instal ⊕ di ujung kanan kolom alamat. |
+
+Setelah terpasang, buka **UntungCerdas** dari ikon di layar utama atau menu Start.
+Aplikasi otomatis memakai versi terbaru dari GitHub setiap kali dibuka saat ada internet.
+
 Aplikasi tersedia dalam 2 versi yang memakai kode Python yang sama
 (`soal.py`, `permainan.py`, `materi.py`):
 - **Versi web** (`index.html`): kode Python dijalankan di browser memakai [Pyodide](https://pyodide.org).
@@ -177,6 +192,9 @@ karena sudah tertulis di aplikasi.
 aritmatika_sosial-/
 ├── index.html         # Versi web: tampilan game di browser
 ├── web_api.py         # Versi web: penghubung tampilan web dengan logika Python
+├── manifest.webmanifest # Identitas aplikasi terinstal (nama, ikon, warna)
+├── sw.js              # Service worker: instalasi & mode offline
+├── ikon/              # Ikon aplikasi (192, 512, maskable, Apple)
 ├── main.py            # Versi desktop: tampilan game (GUI Tkinter)
 ├── soal.py            # Bank soal: 4 misi, tahapan, kunci jawaban, pembahasan
 ├── rmt.py             # Model RMT: orientasi MLE, fase kognitif, mediasi, profil diagnostik
@@ -204,6 +222,8 @@ aritmatika_sosial-/
 | `ai_tutor.py` | Menghubungkan aplikasi ke API Google Gemini dan menyusun prompt mediator RMT (mediasi, diagnosis, tanggapan refleksi). |
 | `index.html` | Halaman web game. Memuat Python di browser (Pyodide) lalu menjalankan `soal.py`, `permainan.py`, dan `materi.py` yang sama. |
 | `web_api.py` | Penghubung antara halaman web dan logika game Python. |
+| `manifest.webmanifest` | Data aplikasi terinstal (PWA): nama, ikon, warna tema, dan mode layar penuh. |
+| `sw.js` | *Service worker*: menyimpan file aplikasi dan Python (Pyodide) di perangkat agar bisa diinstal dan dipakai offline. |
 | `tests/` | Menguji kunci jawaban, penilaian, data RMT, uji ulang, dan tutor AI (dengan server AI tiruan). |
 
 ### Alur Program
