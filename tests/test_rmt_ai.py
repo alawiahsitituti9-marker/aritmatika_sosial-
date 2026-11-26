@@ -93,11 +93,21 @@ class TestAsesmenDinamis(unittest.TestCase):
 class _ServerTiruan(BaseHTTPRequestHandler):
     """Meniru endpoint Gemini yang kompatibel OpenAI."""
     diterima = {}
+    model_dicoba = []
+    gagal_dulu = 0  # jumlah respons 503 sebelum berhasil
 
     def do_POST(self):
         panjang = int(self.headers["Content-Length"])
         _ServerTiruan.diterima = {"auth": self.headers.get("Authorization"),
                                   "body": json.loads(self.rfile.read(panjang))}
+        _ServerTiruan.model_dicoba.append(_ServerTiruan.diterima["body"]["model"])
+        kode_sibuk = {"sibuk-503": 503, "habis-429": 429}.get(_ServerTiruan.diterima["body"]["model"])
+        if kode_sibuk or (_ServerTiruan.gagal_dulu > 0):
+            _ServerTiruan.gagal_dulu -= 1
+            self.send_response(kode_sibuk or 503)
+            self.end_headers()
+            self.wfile.write(b'{"error": {"code": 503, "message": "The model is overloaded."}}')
+            return
         if self.headers.get("Authorization") == "Bearer salah":
             isi = b'[{"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.", "status": "INVALID_ARGUMENT", "details": [{"reason": "API_KEY_INVALID"}]}}]'
             self.send_response(400)
@@ -122,12 +132,14 @@ class TestAITutor(unittest.TestCase):
         cls.server = HTTPServer(("127.0.0.1", 0), _ServerTiruan)
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.url = f"http://127.0.0.1:{cls.server.server_port}/chat/completions"
+        cls.jeda_asli, ai_tutor.JEDA_COBA_ULANG = ai_tutor.JEDA_COBA_ULANG, 0
         cls.asli = ai_tutor.PENYEDIA["gemini"]["url"]
         ai_tutor.PENYEDIA["gemini"]["url"] = cls.url
 
     @classmethod
     def tearDownClass(cls):
         ai_tutor.PENYEDIA["gemini"]["url"] = cls.asli
+        ai_tutor.JEDA_COBA_ULANG = cls.jeda_asli
         cls.server.shutdown()
 
     def setUp(self):
@@ -142,6 +154,37 @@ class TestAITutor(unittest.TestCase):
         self.assertEqual(body["model"], "gemini-flash-latest")
         self.assertIn("generativelanguage.googleapis.com", self.asli)
         self.assertEqual(body["messages"][0]["role"], "system")
+
+    def test_coba_ulang_saat_server_sibuk(self):
+        cfg = {"penyedia": "gemini", "api_key": "kunci-uji", "model": ""}
+        _ServerTiruan.model_dicoba, _ServerTiruan.gagal_dulu = [], 1
+        self.assertEqual(ai_tutor.panggil(cfg, []), "Coba susun tabel.")
+        self.assertEqual(_ServerTiruan.model_dicoba, ["gemini-flash-latest"] * 2)
+
+    def test_pindah_ke_model_cadangan(self):
+        for model, kode in (("sibuk-503", 503), ("habis-429", 429)):
+            _ServerTiruan.model_dicoba, _ServerTiruan.gagal_dulu = [], 0
+            cfg = {"penyedia": "gemini", "api_key": "kunci-uji", "model": model}
+            self.assertEqual(ai_tutor.panggil(cfg, []), "Coba susun tabel.")
+            self.assertEqual(_ServerTiruan.model_dicoba[-1], "gemini-flash-lite-latest")
+            percobaan = ai_tutor.JUMLAH_COBA_ULANG + 1 if kode == 503 else 1
+            self.assertEqual(_ServerTiruan.model_dicoba.count(model), percobaan)
+
+    def test_cadangan_tidak_ada_tetap_laporkan_server_sibuk(self):
+        asli = ai_tutor.PENYEDIA["gemini"]["cadangan"]
+        ai_tutor.PENYEDIA["gemini"]["cadangan"] = "sibuk-503"
+        try:
+            # cadangan juga sibuk -> pesan tetap "server sibuk"
+            with self.assertRaisesRegex(ai_tutor.AIError, "sedang sibuk"):
+                ai_tutor.panggil({"penyedia": "gemini", "api_key": "kunci-uji", "model": "habis-429"}, [])
+        finally:
+            ai_tutor.PENYEDIA["gemini"]["cadangan"] = asli
+
+    def test_key_salah_tidak_dicoba_ulang(self):
+        _ServerTiruan.model_dicoba, _ServerTiruan.gagal_dulu = [], 0
+        with self.assertRaises(ai_tutor.AIError):
+            ai_tutor.panggil({"penyedia": "gemini", "api_key": "salah"}, [])
+        self.assertEqual(len(_ServerTiruan.model_dicoba), 1)
 
     def test_key_salah_dan_key_kosong(self):
         with self.assertRaisesRegex(ai_tutor.AIError, "API key Gemini tidak valid.*diawali 'AIza'"):

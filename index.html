@@ -470,23 +470,39 @@ async function mintaAI() {
 }
 
 async function kirimAI(req, key) {
+  /* Server sibuk (5xx) → coba ulang otomatis; tetap sibuk / kuota habis (429) → model cadangan. */
+  const jeda = ms => new Promise(r => setTimeout(r, ms));
+  let terakhir = null, utama = null;
   try {
-    const r = await fetch(req.url, {
-      method: "POST",
-      headers: { ...req.headers, Authorization: "Bearer " + api.bersihkan_key(key) },
-      body: JSON.stringify(req.body),
-    });
-    if (!r.ok) {
-      let pesan = api.galat_http(r.status, await r.text());
-      const saran = api.cek_format_key(key);
-      if (pesan.includes("tidak valid") && saran) pesan += " " + saran;
-      return "⚠️ " + pesan;
+    for (const model of req.model) {
+      for (let i = 0; i <= req.jumlah_coba_ulang; i++) {
+        const r = await fetch(req.url, {
+          method: "POST",
+          headers: { ...req.headers, Authorization: "Bearer " + api.bersihkan_key(key) },
+          body: JSON.stringify({ ...req.body, model }),
+        });
+        if (r.ok) {
+          const h = JSON.parse(api.ambil_teks_ai(await r.text()));
+          return h.error ? "⚠️ " + h.error : h.teks;
+        }
+        terakhir = { kode: r.status, isi: await r.text() };
+        if (req.kode_coba_ulang.includes(r.status) && i < req.jumlah_coba_ulang) {
+          await jeda(req.jeda * 1000 * (i + 1));
+          continue;
+        }
+        break;
+      }
+      if (!utama) utama = terakhir;
+      if (!req.kode_coba_ulang.includes(terakhir.kode) && terakhir.kode !== 429) break;
     }
-    const h = JSON.parse(api.ambil_teks_ai(await r.text()));
-    return h.error ? "⚠️ " + h.error : h.teks;
+    if ((terakhir.kode === 400 || terakhir.kode === 404) && utama) terakhir = utama;
   } catch (e) {
     return "⚠️ Tidak dapat terhubung ke server AI. Periksa koneksi internet, lalu coba lagi.";
   }
+  let pesan = api.galat_http(terakhir.kode, terakhir.isi);
+  const saran = api.cek_format_key(key);
+  if (pesan.includes("tidak valid") && saran) pesan += " " + saran;
+  return "⚠️ " + pesan;
 }
 
 function pengaturanAI() {

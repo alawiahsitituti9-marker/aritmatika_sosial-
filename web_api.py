@@ -157,7 +157,11 @@ def _permintaan(penyedia, model, pesan, maks_token=400) -> str:
     url, headers, body = ai_tutor.buat_permintaan(
         {"penyedia": penyedia, "api_key": "", "model": model}, pesan, maks_token)
     headers.pop("Authorization", None)
-    return json.dumps({"url": url, "headers": headers, "body": body})
+    return json.dumps({"url": url, "headers": headers, "body": body,
+                       "model": ai_tutor.daftar_model({"penyedia": penyedia, "model": model}),
+                       "kode_coba_ulang": list(ai_tutor.KODE_COBA_ULANG),
+                       "jumlah_coba_ulang": ai_tutor.JUMLAH_COBA_ULANG,
+                       "jeda": ai_tutor.JEDA_COBA_ULANG})
 
 
 def ambil_teks_ai(data_json: str) -> str:

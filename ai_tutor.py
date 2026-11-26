@@ -17,6 +17,7 @@ variabel lingkungan GEMINI_API_KEY.
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -30,10 +31,17 @@ PENYEDIA = {
         "nama": "Google Gemini (aistudio.google.com)",
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         "model": "gemini-flash-latest",
+        # dipakai otomatis jika model utama sibuk (503) atau kuotanya habis (429)
+        "cadangan": "gemini-flash-lite-latest",
         "env": "GEMINI_API_KEY",
     },
 }
 PENYEDIA_BAWAAN = "gemini"
+
+# Kode HTTP "server sibuk/sementara" yang layak dicoba ulang otomatis.
+KODE_COBA_ULANG = (500, 502, 503, 504)
+JUMLAH_COBA_ULANG = 2      # percobaan ulang per model
+JEDA_COBA_ULANG = 2.0      # detik (dikalikan nomor percobaan)
 
 SISTEM = """Kamu adalah "Tutor UntungCerdas", MEDIATOR kognitif untuk siswa SMP kelas VII yang
 belajar persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT, Kinard & Kozulin).
@@ -254,34 +262,75 @@ def pesan_galat_http(kode: int, isi: str = "") -> str:
         403: "Akses ditolak oleh server AI. Periksa API key dan izin akun.",
         404: "Model AI tidak ditemukan. Periksa nama model di Pengaturan AI.",
         429: "Batas kuota gratis Gemini tercapai. Tunggu sekitar 1 menit, lalu coba lagi.",
+        500: "Server AI sedang mengalami gangguan. Tunggu 1–2 menit, lalu klik tombol AI lagi.",
+        503: "Server Gemini sedang sibuk karena banyak pengguna. Aplikasi sudah mencoba ulang "
+             "otomatis — tunggu 1–2 menit, lalu klik tombol AI lagi.",
     }.get(kode, f"Server AI sedang bermasalah (kode {kode}). Coba lagi nanti.")
 
 
-def panggil(cfg: dict, pesan: list, timeout: int = 60, maks_token: int = 400) -> str:
-    """Kirim pesan ke AI dan kembalikan teks jawabannya (dipakai versi desktop)."""
-    if not siap(cfg):
-        raise AIError("API key belum diisi. Buka menu ⚙️ Pengaturan AI terlebih dahulu.")
-    url, headers, body = buat_permintaan(cfg, pesan, maks_token)
+class _GagalHTTP(Exception):
+    def __init__(self, kode: int, isi: str):
+        super().__init__(kode)
+        self.kode, self.isi = kode, isi
+
+
+def _kirim(url, headers, body, timeout):
     req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"),
                                  headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            data = json.loads(r.read().decode("utf-8"))
+            return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:
             isi = e.read().decode("utf-8", "replace")
         except OSError:
             isi = ""
-        pesan = pesan_galat_http(e.code, isi)
-        saran = cek_format_key(cfg.get("api_key", ""))
-        if "tidak valid" in pesan and saran:
-            pesan += " " + saran
-        raise AIError(pesan) from None
-    except (urllib.error.URLError, TimeoutError, OSError):
-        raise AIError("Tidak dapat terhubung ke server AI. Periksa koneksi internet.") from None
-    except ValueError:
-        raise AIError("Respons AI tidak dapat dibaca.") from None
-    return ambil_teks(data)
+        raise _GagalHTTP(e.code, isi) from None
+
+
+def daftar_model(cfg: dict) -> list:
+    """Model yang dicoba berurutan: model pilihan/bawaan, lalu model cadangan."""
+    p = PENYEDIA.get(cfg.get("penyedia"), PENYEDIA[PENYEDIA_BAWAAN])
+    utama = cfg.get("model") or p["model"]
+    return [utama] + ([p["cadangan"]] if p.get("cadangan") and p["cadangan"] != utama else [])
+
+
+def panggil(cfg: dict, pesan: list, timeout: int = 60, maks_token: int = 400) -> str:
+    """Kirim pesan ke AI dan kembalikan teks jawabannya (dipakai versi desktop).
+
+    Jika server sibuk (5xx), dicoba ulang otomatis beberapa kali; jika tetap
+    sibuk atau kuota habis (429), beralih ke model cadangan.
+    """
+    if not siap(cfg):
+        raise AIError("API key belum diisi. Buka menu ⚙️ Pengaturan AI terlebih dahulu.")
+    url, headers, body = buat_permintaan(cfg, pesan, maks_token)
+    galat = galat_utama = None
+    for model in daftar_model(cfg):
+        body["model"] = model
+        for percobaan in range(JUMLAH_COBA_ULANG + 1):
+            try:
+                return ambil_teks(_kirim(url, headers, body, timeout))
+            except _GagalHTTP as e:
+                galat = e
+                if e.kode in KODE_COBA_ULANG and percobaan < JUMLAH_COBA_ULANG:
+                    time.sleep(JEDA_COBA_ULANG * (percobaan + 1))
+                    continue
+                break  # ke model cadangan (atau berhenti)
+            except (urllib.error.URLError, TimeoutError, OSError):
+                raise AIError("Tidak dapat terhubung ke server AI. Periksa koneksi internet.") from None
+            except ValueError:
+                raise AIError("Respons AI tidak dapat dibaca.") from None
+        if galat_utama is None:
+            galat_utama = galat
+        if galat.kode not in KODE_COBA_ULANG + (429,):
+            break  # galat lain (mis. key salah) tidak perlu dicoba dengan model cadangan
+    if galat.kode in (400, 404) and galat is not galat_utama:
+        galat = galat_utama  # model cadangan tidak tersedia: laporkan masalah model utama
+    pesan_galat = pesan_galat_http(galat.kode, galat.isi)
+    saran = cek_format_key(cfg.get("api_key", ""))
+    if "tidak valid" in pesan_galat and saran:
+        pesan_galat += " " + saran
+    raise AIError(pesan_galat)
 
 
 def pesan_refleksi(misi, fase_sulit: str, strategi: str) -> list:
