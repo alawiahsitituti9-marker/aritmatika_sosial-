@@ -473,10 +473,15 @@ async function kirimAI(req, key) {
   try {
     const r = await fetch(req.url, {
       method: "POST",
-      headers: { ...req.headers, Authorization: "Bearer " + key.trim() },
+      headers: { ...req.headers, Authorization: "Bearer " + api.bersihkan_key(key) },
       body: JSON.stringify(req.body),
     });
-    if (!r.ok) return "⚠️ " + api.galat_http(r.status, await r.text());
+    if (!r.ok) {
+      let pesan = api.galat_http(r.status, await r.text());
+      const saran = api.cek_format_key(key);
+      if (pesan.includes("tidak valid") && saran) pesan += " " + saran;
+      return "⚠️ " + pesan;
+    }
     const h = JSON.parse(api.ambil_teks_ai(await r.text()));
     return h.error ? "⚠️ " + h.error : h.teks;
   } catch (e) {
@@ -510,7 +515,7 @@ function pengaturanAI() {
       </div>
     </div>`;
   document.body.appendChild(lapisan);
-  const ambil = () => ({ penyedia: $("ai-penyedia").value, api_key: $("ai-key").value.trim(), model: $("ai-model").value.trim() });
+  const ambil = () => ({ penyedia: $("ai-penyedia").value, api_key: api.bersihkan_key($("ai-key").value), model: $("ai-model").value.trim() });
   const bawaan = () => { $("ai-bawaan").textContent = "Model bawaan: " + penyedia[$("ai-penyedia").value].model; };
   bawaan();
   $("ai-penyedia").onchange = bawaan;

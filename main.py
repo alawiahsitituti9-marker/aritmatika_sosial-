@@ -681,7 +681,7 @@ class Aplikasi(tk.Tk):
         lbl_status.pack(anchor="w", pady=(10, 0))
 
         def ambil():
-            return {"penyedia": var_penyedia.get(), "api_key": var_key.get().strip(),
+            return {"penyedia": var_penyedia.get(), "api_key": ai_tutor.bersihkan_key(var_key.get()),
                     "model": var_model.get().strip()}
 
         def simpan():

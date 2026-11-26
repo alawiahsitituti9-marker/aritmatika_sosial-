@@ -174,3 +174,10 @@ def galat_http(kode: int, isi: str = "") -> str:
 def daftar_penyedia() -> str:
     return json.dumps({k: {"nama": v["nama"], "model": v["model"]}
                        for k, v in ai_tutor.PENYEDIA.items()})
+
+def bersihkan_key(key: str) -> str:
+    return ai_tutor.bersihkan_key(key)
+
+
+def cek_format_key(key: str) -> str:
+    return ai_tutor.cek_format_key(key) or ""

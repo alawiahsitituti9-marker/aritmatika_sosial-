@@ -85,8 +85,31 @@ def simpan_config(cfg: dict, path: Path = FILE_CONFIG) -> None:
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+def bersihkan_key(key: str) -> str:
+    """Rapikan key hasil salin: buang spasi, enter, tanda kutip, dan awalan seperti 'Bearer '."""
+    k = (key or "").strip().strip("\"'").strip()
+    for awalan in ("Bearer ", "bearer ", "GEMINI_API_KEY=", "GOOGLE_API_KEY=", "API_KEY=", "key="):
+        if k.startswith(awalan):
+            k = k[len(awalan):].strip().strip("\"'")
+    return "".join(k.split())
+
+
+def cek_format_key(key: str):
+    """Kembalikan peringatan jika key tidak tampak seperti API key Gemini, atau None."""
+    k = bersihkan_key(key)
+    if not k:
+        return "API key masih kosong."
+    if not k.startswith("AIza"):
+        return ("Key Gemini dari Google AI Studio biasanya diawali 'AIza'. Pastikan yang disalin "
+                "adalah API key itu sendiri, bukan nama/ID project atau potongan kode.")
+    if len(k) < 35:
+        return (f"Key hanya {len(k)} karakter, kemungkinan tidak tersalin lengkap "
+                "(key Gemini biasanya 39 karakter). Gunakan tombol salin di Google AI Studio.")
+    return None
+
+
 def siap(cfg: dict) -> bool:
-    return bool(cfg.get("api_key", "").strip())
+    return bool(bersihkan_key(cfg.get("api_key", "")))
 
 
 # ------------------------------------------------------------------ prompt --
@@ -201,7 +224,7 @@ def buat_permintaan(cfg: dict, pesan: list, maks_token: int = 400):
         "stream": False,
     }
     headers = {"Content-Type": "application/json",
-               "Authorization": f"Bearer {cfg.get('api_key', '').strip()}"}
+               "Authorization": f"Bearer {bersihkan_key(cfg.get('api_key', ''))}"}
     return p["url"], headers, body
 
 
@@ -249,7 +272,11 @@ def panggil(cfg: dict, pesan: list, timeout: int = 60, maks_token: int = 400) ->
             isi = e.read().decode("utf-8", "replace")
         except OSError:
             isi = ""
-        raise AIError(pesan_galat_http(e.code, isi)) from None
+        pesan = pesan_galat_http(e.code, isi)
+        saran = cek_format_key(cfg.get("api_key", ""))
+        if "tidak valid" in pesan and saran:
+            pesan += " " + saran
+        raise AIError(pesan) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise AIError("Tidak dapat terhubung ke server AI. Periksa koneksi internet.") from None
     except ValueError:

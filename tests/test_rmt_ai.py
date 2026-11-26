@@ -144,12 +144,24 @@ class TestAITutor(unittest.TestCase):
         self.assertEqual(body["messages"][0]["role"], "system")
 
     def test_key_salah_dan_key_kosong(self):
-        with self.assertRaisesRegex(ai_tutor.AIError, "API key Gemini tidak valid"):
+        with self.assertRaisesRegex(ai_tutor.AIError, "API key Gemini tidak valid.*diawali 'AIza'"):
             ai_tutor.panggil({"penyedia": "gemini", "api_key": "salah"}, [])
         with self.assertRaisesRegex(ai_tutor.AIError, "belum diisi"):
             ai_tutor.panggil({"penyedia": "gemini", "api_key": ""}, [])
         with self.assertRaisesRegex(ai_tutor.AIError, "tidak memberi jawaban"):
             ai_tutor.ambil_teks({"choices": [{"message": {"content": ""}}]})
+
+    def test_key_dibersihkan_dan_dicek(self):
+        asli = "AIza" + "x" * 35
+        for salinan in (f"  {asli}\n", f'"{asli}"', f"Bearer {asli}", f"GEMINI_API_KEY={asli}",
+                        asli[:20] + "\n" + asli[20:]):
+            self.assertEqual(ai_tutor.bersihkan_key(salinan), asli, repr(salinan))
+        self.assertIsNone(ai_tutor.cek_format_key(asli))
+        self.assertIn("AIza", ai_tutor.cek_format_key("project-123456"))
+        self.assertIn("tidak tersalin lengkap", ai_tutor.cek_format_key("AIzaSyABC"))
+        cfg = {"penyedia": "gemini", "api_key": f"  '{asli}' ", "model": ""}
+        _, headers, _ = ai_tutor.buat_permintaan(cfg, [])
+        self.assertEqual(headers["Authorization"], f"Bearer {asli}")
 
     def test_prompt_rmt(self):
         m, t = self.misi[3], self.misi[3].tahapan[2]
