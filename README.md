@@ -1,8 +1,20 @@
-# 🛒 Pasar Pintar: Game Pembelajaran Persentase Untung dan Rugi
+# 🛒 UntungCerdas: Game Pembelajaran Persentase Untung dan Rugi
 
-Pasar Pintar adalah aplikasi/game pembelajaran matematika berbasis **Python** (Tkinter).
+UntungCerdas adalah aplikasi/game pembelajaran matematika berbasis **Python**.
 Siswa berperan sebagai pedagang dan menyelesaikan soal-soal untung dan rugi
 **tahap demi tahap**. Setiap tahap langsung dinilai dan dilengkapi pembahasan.
+
+## ▶️ Mainkan Langsung di Browser
+
+👉 **https://alawiahsitituti9-marker.github.io/aritmatika_sosial-/**
+
+Bisa dibuka di laptop maupun HP tanpa instalasi apa pun. Pembukaan pertama memerlukan
+sekitar 5–20 detik untuk memuat Python di browser.
+
+Aplikasi tersedia dalam 2 versi yang memakai kode Python yang sama
+(`soal.py`, `permainan.py`, `materi.py`):
+- **Versi web** (`index.html`): kode Python dijalankan di browser memakai [Pyodide](https://pyodide.org).
+- **Versi desktop** (`main.py`): memakai Tkinter, dijalankan dengan `python main.py`.
 
 ---
 
@@ -32,6 +44,10 @@ Menampilkan nilai, predikat, skor, dan bintang tiap indikator.
 
 ### A. Langkah Menjalankan Aplikasi
 
+**Versi web:** cukup buka link https://alawiahsitituti9-marker.github.io/aritmatika_sosial-/
+
+**Versi desktop:**
+
 1. **Install Python**
    - Unduh Python 3.10 atau versi yang lebih baru di https://www.python.org/downloads/
    - Saat instalasi di Windows, centang **"Add Python to PATH"**.
@@ -47,7 +63,7 @@ Menampilkan nilai, predikat, skor, dan bintang tiap indikator.
    ```bash
    python main.py
    ```
-6. Jendela game **Pasar Pintar** akan terbuka.
+6. Jendela game **UntungCerdas** akan terbuka.
 
 > Tidak perlu install library tambahan karena Tkinter sudah termasuk dalam Python.
 
@@ -87,7 +103,9 @@ Menampilkan nilai, predikat, skor, dan bintang tiap indikator.
 
 ```
 aritmatika_sosial-/
-├── main.py            # Program utama: tampilan game (GUI Tkinter)
+├── index.html         # Versi web: tampilan game di browser
+├── web_api.py         # Versi web: penghubung tampilan web dengan logika Python
+├── main.py            # Versi desktop: tampilan game (GUI Tkinter)
 ├── soal.py            # Bank soal: 4 misi, tahapan, kunci jawaban, pembahasan
 ├── permainan.py       # Logika permainan: urutan misi/tahap, skor, nilai, predikat
 ├── materi.py          # Ringkasan materi untung dan rugi
@@ -107,6 +125,8 @@ aritmatika_sosial-/
 | `permainan.py` | Mengatur jalannya permainan: memeriksa jawaban, memberi skor tiap tahap, pindah tahap/misi, dan menghitung nilai akhir. |
 | `materi.py` | Teks materi: harga beli & jual, untung dan rugi, persentase, menentukan harga jual, dan kesalahan umum. |
 | `skor.py` | Menyimpan dan membaca 10 skor tertinggi di file `skor_tertinggi.json`. |
+| `index.html` | Halaman web game. Memuat Python di browser (Pyodide) lalu menjalankan `soal.py`, `permainan.py`, dan `materi.py` yang sama. |
+| `web_api.py` | Penghubung antara halaman web dan logika game Python. |
 | `tests/test_soal.py` | Menguji bahwa kunci jawaban benar dan penilaian berjalan sesuai aturan. |
 
 ### Alur Program

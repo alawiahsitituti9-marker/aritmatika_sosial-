@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UntungCerdas</title>
+<meta name="description" content="Game literasi matematika: persentase untung dan rugi. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<style>
+  :root {
+    --bg: #FFF8EC; --kartu: #FFFFFF; --lembut: #FFF1DC; --garis: #E8DCC8;
+    --teks: #2D2A26; --redup: #7A7268; --utama: #E07A1F; --hijau: #2E9E5B;
+    --merah: #D64545; --biru: #2F6FB3; --ungu: #7A4FB5;
+    --hijau-muda: #DFF3E6; --merah-muda: #FBE3E3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E1B18; --kartu: #2A2622; --lembut: #362F27; --garis: #4A4138;
+      --teks: #F3EDE4; --redup: #B5AA9C; --hijau-muda: #1F3B2B; --merah-muda: #43262A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E1B18; --kartu: #2A2622; --lembut: #362F27; --garis: #4A4138;
+    --teks: #F3EDE4; --redup: #B5AA9C; --hijau-muda: #1F3B2B; --merah-muda: #43262A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--teks);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; line-height: 1.5;
+  }
+  .wadah { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  .tengah { text-align: center; }
+  h1 { color: var(--utama); font-size: 2.6rem; margin: 0; }
+  .sub { color: var(--redup); margin: 4px 0 20px; }
+  .kecil { font-size: .85rem; color: var(--redup); }
+  .tombol {
+    display: inline-block; border: 0; border-radius: 6px; padding: 12px 22px; cursor: pointer;
+    font: 600 1rem inherit; font-family: inherit; color: #fff; background: var(--utama);
+  }
+  .tombol:hover:not(:disabled) { filter: brightness(1.08); }
+  .tombol:disabled { opacity: .45; cursor: not-allowed; }
+  .tombol:focus-visible, input:focus-visible, .opsi:focus-within { outline: 3px solid var(--biru); outline-offset: 2px; }
+  .hijau { background: var(--hijau); } .biru { background: var(--biru); }
+  .ungu { background: var(--ungu); } .abu { background: #7A7268; }
+  .menu-tombol { display: flex; flex-direction: column; gap: 10px; max-width: 340px; margin: 0 auto; }
+  .nama { margin-bottom: 18px; }
+  .nama input, .isian input {
+    font: inherit; padding: 8px 10px; border: 1px solid var(--garis); border-radius: 6px;
+    background: var(--kartu); color: var(--teks);
+  }
+  .kartu { background: var(--kartu); border: 1px solid var(--garis); border-radius: 10px; padding: 18px 20px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .bar b { font-size: 1.05rem; }
+  .skor { color: var(--utama); font-weight: 700; }
+  .grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 2rem; } }
+  .lencana { display: inline-block; color: #fff; font-weight: 700; font-size: .78rem; padding: 3px 8px; border-radius: 4px; }
+  .judul-misi { font-size: 1.25rem; margin: 10px 0 6px; }
+  .tahapan { list-style: none; padding: 0; margin: 8px 0 0; font-size: .92rem; }
+  .tahapan li { padding: 2px 0; color: var(--redup); }
+  .tahapan li.aktif { color: var(--utama); font-weight: 700; }
+  .tahapan li.ok { color: var(--hijau); } .tahapan li.salah { color: var(--merah); }
+  .judul-tahap { color: var(--utama); font-size: 1.25rem; margin: 0; }
+  .isian { display: flex; align-items: center; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+  .isian label { min-width: 220px; }
+  .isian input { width: 160px; font-size: 1.05rem; }
+  .tanda { font-weight: 700; }
+  .opsi {
+    display: flex; gap: 10px; align-items: flex-start; background: var(--lembut); border-radius: 8px;
+    padding: 10px 12px; margin: 6px 0; cursor: pointer; white-space: pre-line; border: 2px solid transparent;
+  }
+  .opsi input { margin-top: 5px; }
+  .opsi.benar { background: var(--hijau-muda); border-color: var(--hijau); color: var(--hijau); }
+  .opsi.keliru { background: var(--merah-muda); border-color: var(--merah); color: var(--merah); }
+  .hasil { font-weight: 700; font-size: 1.1rem; margin: 14px 0 4px; min-height: 1.5em; }
+  .bahas { white-space: pre-line; background: var(--lembut); border-radius: 8px; padding: 10px 12px; }
+  .aksi { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--garis); vertical-align: top; }
+  th { color: var(--redup); font-weight: 600; }
+  .bintang { color: var(--utama); letter-spacing: 2px; white-space: nowrap; }
+  .tabel-gulir { overflow-x: auto; }
+  .materi { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 760px) { .materi { grid-template-columns: 1fr; } }
+  .materi nav button {
+    display: block; width: 100%; text-align: left; border: 0; background: var(--kartu); color: var(--teks);
+    padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  .materi nav button.aktif { background: var(--biru); color: #fff; }
+  .materi pre { white-space: pre-wrap; font-family: Consolas, "Courier New", monospace; font-size: .95rem; margin: 0; }
+  .muat { padding: 80px 0; }
+  .spinner { width: 44px; height: 44px; border: 5px solid var(--garis); border-top-color: var(--utama);
+    border-radius: 50%; margin: 0 auto 16px; animation: putar 1s linear infinite; }
+  @keyframes putar { to { transform: rotate(360deg); } }
+  .catatan { margin-top: 28px; }
+  .tersembunyi { display: none !important; }
+</style>
+</head>
+<body>
+<main class="wadah" id="app">
+  <div class="tengah muat">
+    <div class="spinner"></div>
+    <p><b>Memuat UntungCerdas…</b></p>
+    <p class="kecil">Menyiapkan Python di browser (sekitar 5–20 detik pada pembukaan pertama).</p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+const WARNA = ["var(--biru)", "var(--ungu)", "var(--hijau)", "var(--merah)"];
+const app = document.getElementById("app");
+let py, api, st, dijawab = false, nama = "Pemain";
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const panggil = (fn, ...a) => JSON.parse(api[fn](...a));
+
+function simpanLokal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function bacaLokal(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+
+async function mulaiPython() {
+  try {
+    py = await loadPyodide();
+    for (const f of ["soal.py", "permainan.py", "materi.py", "web_api.py"]) {
+      const r = await fetch(f);
+      if (!r.ok) throw new Error("Gagal memuat " + f);
+      py.FS.writeFile(f, await r.text());
+    }
+    api = py.pyimport("web_api");
+    nama = bacaLokal("uc-nama", "Pemain");
+    menu();
+  } catch (e) {
+    app.innerHTML = `<div class="tengah muat"><p><b>Aplikasi gagal dimuat.</b></p>
+      <p class="kecil">${esc(e.message || e)}<br>Periksa koneksi internet lalu muat ulang halaman.</p></div>`;
+  }
+}
+
+/* ------------------------------------------------------------- menu */
+function menu() {
+  app.innerHTML = `
+    <div class="tengah">
+      <div style="font-size:3rem">🛒</div>
+      <h1>UntungCerdas</h1>
+      <p class="sub">Game Literasi Matematika — Persentase Untung dan Rugi</p>
+      <div class="nama"><label>Nama pemain: <input id="nama" maxlength="30" value="${esc(nama)}"></label></div>
+      <div class="menu-tombol">
+        <button class="tombol" onclick="mulai('kisi')">📝 Soal Kisi-kisi (4 Misi)</button>
+        <button class="tombol hijau" onclick="mulai('acak')">🎲 Latihan Soal Acak</button>
+        <button class="tombol biru" onclick="materi()">📖 Pelajari Materi</button>
+        <button class="tombol ungu" onclick="papanSkor()">🏆 Papan Skor</button>
+      </div>
+      <p class="kecil catatan">4 misi sesuai indikator Mathematical Literacy • dikerjakan per tahap • skor maksimum 6 per misi<br>
+      Logika game ditulis dengan <b>Python</b> dan dijalankan langsung di browser.</p>
+    </div>`;
+}
+
+function mulai(mode) {
+  const n = document.getElementById("nama");
+  if (n) { nama = n.value.trim() || "Pemain"; simpanLokal("uc-nama", nama); }
+  st = panggil("mulai", mode);
+  layarMisi();
+}
+
+/* ------------------------------------------------------------- misi */
+function layarMisi() {
+  const m = st.misi;
+  app.innerHTML = `
+    <div class="bar">
+      <b>Misi ${st.i_misi + 1} dari ${st.jumlah_misi} • ${esc(st.mode)}</b>
+      <span><span class="skor" id="skor"></span>
+        <button class="tombol abu" style="padding:6px 14px;margin-left:12px" onclick="keluar()">Menu</button></span>
+    </div>
+    <div class="grid">
+      <section class="kartu">
+        <span class="lencana" style="background:${WARNA[(m.nomor - 1) % 4]}">INDIKATOR ${m.nomor}: ${esc(m.indikator.toUpperCase())}</span>
+        <p class="kecil" style="margin:6px 0 0">${esc(m.deskripsi)}</p>
+        <h2 class="judul-misi">${esc(m.judul)}</h2>
+        <p>${esc(m.soal)}</p>
+        <b class="kecil">Tahapan Penyelesaian</b>
+        <ul class="tahapan" id="tahapan"></ul>
+      </section>
+      <section class="kartu" id="kerja"></section>
+    </div>`;
+  layarTahap();
+}
+
+function perbaruiStatus() {
+  document.getElementById("skor").textContent = `⭐ Skor: ${st.skor} / ${st.maks}`;
+  document.getElementById("tahapan").innerHTML = st.misi.tahapan.map((t, i) => {
+    const label = t.judul.split(":")[0];
+    if (t.hasil === null) {
+      const aktif = i === st.i_tahap;
+      return `<li class="${aktif ? "aktif" : ""}">${aktif ? "▶" : "○"} ${esc(label)} — skor ${t.skor}</li>`;
+    }
+    const ok = t.hasil === t.skor;
+    return `<li class="${ok ? "ok" : "salah"}">${ok ? "✔" : "✘"} ${esc(label)} — ${t.hasil}/${t.skor}</li>`;
+  }).join("");
+}
+
+function layarTahap() {
+  dijawab = false;
+  const t = st.tahap;
+  let isi;
+  if (t.jenis === "isian") {
+    isi = t.isian.map((s, i) => `
+      <div class="isian">
+        <label for="isi${i}">${esc(s.label)}</label>
+        ${s.satuan === "Rp" ? '<span class="kecil">Rp</span>' : ""}
+        <input id="isi${i}" inputmode="decimal" autocomplete="off">
+        ${s.satuan === "%" ? '<span class="kecil">%</span>' : ""}
+        <span class="tanda" id="tanda${i}"></span>
+      </div>`).join("") +
+      `<p class="kecil">Tulis angka saja, misal 30000 atau 30.000; desimal pakai koma (17,65).</p>`;
+  } else {
+    isi = t.pilihan.map((p, i) => `
+      <label class="opsi" id="opsi${i}"><input type="radio" name="pilih" value="${i}">
+        <span><b>${"ABCD"[i]}.</b> ${esc(p)}</span></label>`).join("");
+  }
+  document.getElementById("kerja").innerHTML = `
+    <h2 class="judul-tahap">${esc(t.judul)}</h2>
+    <p class="kecil" style="margin:0">Skor tahap ini: ${t.skor}</p>
+    <p>${esc(t.perintah).replace(/\n/g, "<br>")}</p>
+    ${isi}
+    <div class="hasil" id="hasil" aria-live="polite"></div>
+    <div class="bahas tersembunyi" id="bahas"></div>
+    <div class="aksi">
+      <button class="tombol hijau" id="periksa" onclick="periksa()">Periksa Jawaban</button>
+      <button class="tombol" id="lanjut" onclick="lanjut()" disabled>Lanjut →</button>
+    </div>`;
+  perbaruiStatus();
+  const pertama = document.getElementById("isi0");
+  if (pertama) pertama.focus();
+  document.getElementById("kerja").scrollIntoView({ block: "nearest" });
+}
+
+function periksa() {
+  if (dijawab) return;
+  const t = st.tahap;
+  let jawaban;
+  if (t.jenis === "isian") {
+    jawaban = t.isian.map((_, i) => document.getElementById("isi" + i).value);
+  } else {
+    const r = document.querySelector('input[name="pilih"]:checked');
+    jawaban = r ? Number(r.value) : -1;
+  }
+  const h = panggil("jawab", JSON.stringify(jawaban));
+  const elHasil = document.getElementById("hasil");
+  if (h.error) { elHasil.style.color = "var(--redup)"; elHasil.textContent = h.error; return; }
+  dijawab = true;
+
+  if (t.jenis === "isian") {
+    h.per_butir.forEach((ok, i) => {
+      document.getElementById("isi" + i).disabled = true;
+      const el = document.getElementById("tanda" + i);
+      el.textContent = ok ? "✔" : "✘ " + h.kunci_isian[i];
+      el.style.color = ok ? "var(--hijau)" : "var(--merah)";
+    });
+  } else {
+    document.querySelectorAll('input[name="pilih"]').forEach(r => r.disabled = true);
+    document.getElementById("opsi" + h.kunci_pilihan).classList.add("benar");
+    if (jawaban !== h.kunci_pilihan) document.getElementById("opsi" + jawaban).classList.add("keliru");
+  }
+  elHasil.style.color = h.benar ? "var(--hijau)" : "var(--merah)";
+  elHasil.textContent = h.benar ? `✔ Tepat! +${h.skor} skor` : `✘ Belum tepat (0/${t.skor}). Pelajari pembahasannya:`;
+  const bahas = document.getElementById("bahas");
+  bahas.textContent = "Pembahasan:\n" + h.penjelasan;
+  bahas.classList.remove("tersembunyi");
+
+  st = h.status;
+  const lanjutBtn = document.getElementById("lanjut");
+  lanjutBtn.textContent = st.tahap_terakhir ? (st.misi_terakhir ? "Lihat Hasil Akhir →" : "Misi Berikutnya →") : "Tahap Berikutnya →";
+  lanjutBtn.disabled = false;
+  document.getElementById("periksa").disabled = true;
+  lanjutBtn.focus();
+  perbaruiStatus();
+}
+
+function lanjut() {
+  if (!dijawab) return;
+  const akhirMisi = st.tahap_terakhir;
+  st = panggil("maju");
+  if (st.selesai) hasilAkhir();
+  else if (akhirMisi) { layarMisi(); window.scrollTo(0, 0); }
+  else layarTahap();
+}
+
+function keluar() { if (confirm("Akhiri permainan dan kembali ke menu?")) menu(); }
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter" || !document.getElementById("kerja")) return;
+  e.preventDefault();
+  dijawab ? lanjut() : periksa();
+});
+
+/* ------------------------------------------------------------- hasil */
+function hasilAkhir() {
+  const daftar = bacaLokal("uc-skor", []);
+  const entri = { nama, nilai: st.nilai, skor: st.skor, mode: st.mode, tanggal: new Date().toISOString().slice(0, 10), baru: true };
+  daftar.push(entri);
+  daftar.sort((a, b) => b.nilai - a.nilai || b.skor - a.skor);
+  const top = daftar.slice(0, 10);
+  const peringkat = top.indexOf(entri) + 1;
+  top.forEach(e => delete e.baru);
+  simpanLokal("uc-skor", top);
+
+  const lemah = st.misi.filter(m => m.skor < m.maks).map(m => m.indikator);
+  app.innerHTML = `
+    <div class="tengah">
+      <div style="font-size:3rem">${st.nilai >= 75 ? "🏆" : "📚"}</div>
+      <h1 style="font-size:2rem">Semua Misi Selesai!</h1>
+      <p style="font-size:1.8rem;font-weight:700;margin:6px 0 0">Nilai ${esc(nama)}: ${st.nilai}</p>
+      <p class="sub">Skor ${st.skor} dari ${st.maks} • Predikat ${esc(st.predikat)}</p>
+    </div>
+    <div class="kartu tabel-gulir">
+      <table>
+        <tr><th>No</th><th>Indikator</th><th>Soal</th><th>Skor</th><th>Capaian</th></tr>
+        ${st.misi.map(m => `<tr><td>${m.nomor}</td><td>${esc(m.indikator)}</td><td>${esc(m.judul)}</td>
+          <td>${m.skor} / ${m.maks}</td><td class="bintang">${"★".repeat(m.bintang)}${"☆".repeat(3 - m.bintang)}</td></tr>`).join("")}
+      </table>
+    </div>
+    <div class="tengah">
+      <p>${lemah.length ? "Perlu latihan lagi pada: " + esc(lemah.join("; ")) + "." : "Sempurna! Semua indikator literasi matematika tercapai."}</p>
+      ${peringkat ? `<p style="color:var(--ungu);font-weight:700">Kamu masuk papan skor di peringkat #${peringkat}!</p>` : ""}
+      <button class="tombol hijau" onclick="mulai('${st.mode === "Soal Kisi-kisi" ? "kisi" : "acak"}')">Ulangi</button>
+      <button class="tombol biru" onclick="mulai('acak')">Latihan Acak</button>
+      <button class="tombol abu" onclick="menu()">Menu</button>
+    </div>`;
+  window.scrollTo(0, 0);
+}
+
+/* ------------------------------------------------------------- materi */
+function materi() {
+  const data = panggil("materi");
+  app.innerHTML = `
+    <h1 style="color:var(--biru);font-size:1.8rem">📖 Materi: Persentase Untung dan Rugi</h1>
+    <div class="materi" style="margin-top:14px">
+      <nav>${data.map((m, i) => `<button id="mt${i}" onclick="tampilMateri(${i})">${esc(m.judul)}</button>`).join("")}</nav>
+      <section class="kartu"><h2 id="mjudul" style="color:var(--biru);margin-top:0"></h2><pre id="misi-materi"></pre></section>
+    </div>
+    <p><button class="tombol abu" onclick="menu()">← Kembali</button></p>`;
+  window._materi = data;
+  tampilMateri(0);
+}
+function tampilMateri(i) {
+  document.querySelectorAll(".materi nav button").forEach((b, j) => b.classList.toggle("aktif", i === j));
+  document.getElementById("mjudul").textContent = window._materi[i].judul;
+  document.getElementById("misi-materi").textContent = window._materi[i].isi;
+}
+
+/* ------------------------------------------------------------- papan skor */
+function papanSkor() {
+  const data = bacaLokal("uc-skor", []);
+  app.innerHTML = `
+    <h1 style="color:var(--ungu);font-size:1.8rem" class="tengah">🏆 Papan Skor</h1>
+    <p class="kecil tengah">Skor tersimpan di browser perangkat ini.</p>
+    <div class="kartu tabel-gulir">
+      <table>
+        <tr><th>#</th><th>Nama</th><th>Nilai</th><th>Skor</th><th>Mode</th><th>Tanggal</th></tr>
+        ${data.length ? data.map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.nama)}</td><td><b>${e.nilai}</b></td>
+          <td>${e.skor}/24</td><td>${esc(e.mode)}</td><td>${esc(e.tanggal)}</td></tr>`).join("")
+          : `<tr><td colspan="6" class="tengah kecil">Belum ada skor. Ayo main!</td></tr>`}
+      </table>
+    </div>
+    <p class="tengah"><button class="tombol abu" onclick="menu()">← Kembali</button></p>`;
+}
+
+mulaiPython();
+</script>
+</body>
+</html>

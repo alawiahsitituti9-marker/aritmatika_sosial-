@@ -1,4 +1,4 @@
-"""Pasar Pintar — Game Literasi Matematika: Persentase Untung dan Rugi.
+"""UntungCerdas — Game Literasi Matematika: Persentase Untung dan Rugi.
 
 Jalankan dengan:  python main.py
 """
@@ -59,7 +59,7 @@ class AreaGulir(tk.Frame):
 class Aplikasi(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Pasar Pintar — Literasi Matematika Untung & Rugi")
+        self.title("UntungCerdas — Literasi Matematika Untung & Rugi")
         # Sesuaikan ukuran dengan skala layar (mis. Windows 125%/150%)
         self.skala = max(1.0, self.winfo_fpixels("1i") / 96)
         lebar_layar, tinggi_layar = self.winfo_screenwidth(), self.winfo_screenheight()
@@ -113,7 +113,7 @@ class Aplikasi(tk.Tk):
     def tampil_menu(self):
         f = self.ganti_layar()
         self.label(f, "🛒", size=46).pack(pady=(6, 0))
-        self.label(f, "Pasar Pintar", size=32, bold=True, fg=UTAMA).pack()
+        self.label(f, "UntungCerdas", size=32, bold=True, fg=UTAMA).pack()
         self.label(f, "Game Literasi Matematika — Persentase Untung dan Rugi",
                    size=14, fg=REDUP).pack(pady=(0, 20))
 
