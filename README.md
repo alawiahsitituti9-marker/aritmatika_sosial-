@@ -1,60 +1,145 @@
-# 🛒 Pasar Pintar: Game Literasi Matematika Untung dan Rugi
+# 🛒 Pasar Pintar: Game Pembelajaran Persentase Untung dan Rugi
 
-Draft aplikasi/game pembelajaran untuk materi **Persentase Menghitung Untung dan Rugi**,
-dibuat dengan **Python** dan **Tkinter**. Soal disusun berdasarkan kisi-kisi
-**Mathematical Literacy**, dengan 4 indikator dan penilaian per tahapan penyelesaian.
+Pasar Pintar adalah aplikasi/game pembelajaran matematika berbasis **Python** (Tkinter).
+Siswa berperan sebagai pedagang dan menyelesaikan soal-soal untung dan rugi
+**tahap demi tahap**. Setiap tahap langsung dinilai dan dilengkapi pembahasan.
 
-## Isi Game: 4 Misi sesuai Kisi-kisi
+---
 
-| Misi | Indikator | Soal | Tahapan | Skor Maks |
-|---|---|---|---|---|
-| 1 | Mathematical Reasoning | Memilih Penawaran dengan Keuntungan Terbesar (Toko A, B, C) | 5 tahap (Tahap 3 bernilai 2) | 6 |
-| 2 | Formulating Situations Mathematically | Menentukan Harga Jual dengan Persentase Keuntungan (blender) | 6 tahap | 6 |
-| 3 | Employing Mathematical Concepts, Facts, and Procedures | Menghitung Persentase Untung dan Rugi (sepeda & kipas angin) | 6 tahap | 6 |
-| 4 | Interpreting, Applying, and Evaluating Mathematical Outcomes | Mengevaluasi Pernyataan tentang Persentase Kerugian (jaket) | 6 tahap | 6 |
+## 📋 Langkah-langkah
 
-**Total skor maksimum 24.** Nilai = skor ÷ 24 × 100, dengan predikat A/B/C/D.
+### A. Langkah Menjalankan Aplikasi
 
-### Cara bermain
-- Soal ditampilkan di panel kiri, sedangkan siswa mengerjakannya **tahap demi tahap** di panel kanan,
-  mengikuti urutan "Kisi-kisi Jawaban per Tahapan Penyelesaian".
-- Tahap perhitungan dijawab dengan **mengisi angka**. Tahap identifikasi, model matematika,
-  perbandingan, dan kesimpulan dijawab dengan **pilihan ganda**. Pengecohnya disusun dari
-  miskonsepsi umum, misalnya membagi dengan harga jual atau memilih untung rupiah terbesar.
-- Setiap tahap langsung dinilai sesuai skor per tahapan, lalu **pembahasannya** ditampilkan.
-- Di akhir permainan muncul rekap capaian per indikator (★), nilai, predikat, dan saran indikator yang perlu dilatih.
+1. **Install Python**
+   - Unduh Python 3.10 atau versi yang lebih baru di https://www.python.org/downloads/
+   - Saat instalasi di Windows, centang **"Add Python to PATH"**.
+2. **Unduh kode aplikasi**
+   - Cara 1: klik tombol hijau **Code → Download ZIP** di halaman ini, lalu ekstrak.
+   - Cara 2: gunakan git:
+     ```bash
+     git clone https://github.com/alawiahsitituti9-marker/aritmatika_sosial-.git
+     ```
+3. **Buka folder aplikasi** di VS Code (**File → Open Folder**).
+4. **Buka terminal** di VS Code (**Terminal → New Terminal**).
+5. **Jalankan aplikasi**:
+   ```bash
+   python main.py
+   ```
+6. Jendela game **Pasar Pintar** akan terbuka.
 
-### Mode
-- **Soal Kisi-kisi**: 4 soal persis seperti dokumen kisi-kisi.
-- **Latihan Soal Acak**: 4 soal baru dengan indikator dan tahapan yang sama, tetapi angka, nama,
-  dan barangnya acak, sehingga bisa dipakai berlatih berulang kali.
+> Tidak perlu install library tambahan karena Tkinter sudah termasuk dalam Python.
 
-Fitur lainnya: menu **Materi** (rumus, contoh, dan kesalahan yang sering terjadi) serta **Papan Skor**.
+### B. Langkah Bermain
 
-## Cara Menjalankan
+1. Tulis **nama pemain** di menu utama.
+2. Pilih mode permainan:
+   - **📝 Soal Kisi-kisi**: 4 soal utama.
+   - **🎲 Latihan Soal Acak**: soal baru dengan angka acak untuk latihan.
+3. Baca soal di **panel kiri**.
+4. Kerjakan **tahap demi tahap** di panel kanan:
+   - Tahap perhitungan: isi jawaban berupa angka, misalnya `30000` atau `30.000`.
+   - Tahap identifikasi, model, atau kesimpulan: pilih jawaban A, B, C, atau D.
+5. Klik **Periksa Jawaban** (atau tekan Enter), lalu baca **pembahasannya**.
+6. Klik **Tahap Berikutnya →** sampai keempat misi selesai.
+7. Lihat **hasil akhir**: skor, nilai (0–100), predikat, dan capaian bintang tiap misi.
+8. Gunakan menu **📖 Pelajari Materi** untuk membaca rumus dan **🏆 Papan Skor** untuk melihat skor tertinggi.
 
-Butuh **Python 3.10+**. Tkinter sudah termasuk dalam instalasi Python untuk Windows/macOS.
+### C. Langkah Pembuatan Aplikasi
 
-```bash
-python main.py
+1. **Menentukan materi dan tujuan**: persentase untung dan rugi dengan 4 indikator literasi matematika.
+2. **Merancang soal dan tahapan penyelesaian**: setiap soal dipecah menjadi 5–6 tahap, dan tiap tahap diberi skor.
+3. **Merancang alur game**: Menu → Misi 1–4 (per tahap) → Hasil akhir.
+4. **Menulis kode** dengan Python di VS Code, dibantu Claude Code:
+   - logika soal (`soal.py`)
+   - logika permainan dan penilaian (`permainan.py`)
+   - tampilan GUI (`main.py`)
+   - materi dan papan skor (`materi.py`, `skor.py`)
+5. **Menguji aplikasi** dengan unit test (`tests/`) dan mencoba memainkannya langsung.
+6. **Mengunggah ke GitHub** menggunakan git.
+
+---
+
+## 🗂️ Struktur Aplikasi
+
+### Struktur Folder
+
+```
+aritmatika_sosial-/
+├── main.py            # Program utama: tampilan game (GUI Tkinter)
+├── soal.py            # Bank soal: 4 misi, tahapan, kunci jawaban, pembahasan
+├── permainan.py       # Logika permainan: urutan misi/tahap, skor, nilai, predikat
+├── materi.py          # Ringkasan materi untung dan rugi
+├── skor.py            # Penyimpanan papan skor (file JSON)
+├── tests/
+│   └── test_soal.py   # Unit test untuk memastikan soal & penilaian benar
+├── .gitignore         # Daftar file yang tidak diunggah ke GitHub
+└── README.md          # Dokumentasi (file ini)
 ```
 
-Menjalankan unit test (termasuk pengecekan bahwa kunci jawaban sama dengan kisi-kisi):
+### Penjelasan Setiap File
+
+| File | Fungsi |
+|---|---|
+| `main.py` | Menampilkan semua layar: menu utama, layar misi, hasil akhir, materi, dan papan skor. File ini yang dijalankan. |
+| `soal.py` | Berisi 4 misi beserta tahapannya. Setiap tahap memuat perintah, skor, kunci jawaban, dan pembahasan. Juga berisi pembuat soal acak. |
+| `permainan.py` | Mengatur jalannya permainan: memeriksa jawaban, memberi skor tiap tahap, pindah tahap/misi, dan menghitung nilai akhir. |
+| `materi.py` | Teks materi: harga beli & jual, untung dan rugi, persentase, menentukan harga jual, dan kesalahan umum. |
+| `skor.py` | Menyimpan dan membaca 10 skor tertinggi di file `skor_tertinggi.json`. |
+| `tests/test_soal.py` | Menguji bahwa kunci jawaban benar dan penilaian berjalan sesuai aturan. |
+
+### Alur Program
+
+```
+          ┌─────────────┐
+          │  MENU UTAMA │
+          └──────┬──────┘
+   ┌─────────┬───┴──────┬────────────┐
+   ▼         ▼          ▼            ▼
+ Soal     Latihan    Materi      Papan Skor
+ Kisi-kisi  Acak
+   └────┬────┘
+        ▼
+ ┌────────────────────────────┐
+ │ MISI 1 → 2 → 3 → 4         │
+ │  tiap misi: Tahap 1 … 6    │
+ │  jawab → periksa → bahas   │
+ └─────────────┬──────────────┘
+               ▼
+       ┌───────────────┐
+       │  HASIL AKHIR  │  skor, nilai, predikat, bintang
+       └───────────────┘
+```
+
+### Struktur Soal (Misi dan Tahap)
+
+| Misi | Indikator | Judul Soal | Jumlah Tahap | Skor Maks |
+|---|---|---|---|---|
+| 1 | Mathematical Reasoning | Memilih Penawaran dengan Keuntungan Terbesar | 5 | 6 |
+| 2 | Formulating Situations Mathematically | Menentukan Harga Jual dengan Persentase Keuntungan | 6 | 6 |
+| 3 | Employing Mathematical Concepts, Facts, and Procedures | Menghitung Persentase Untung dan Rugi | 6 | 6 |
+| 4 | Interpreting, Applying, and Evaluating Mathematical Outcomes | Mengevaluasi Pernyataan tentang Persentase Kerugian | 6 | 6 |
+
+### Sistem Penilaian
+
+- Setiap tahap memiliki skor (umumnya 1). Tahap yang dijawab benar mendapat skor penuh.
+- Skor maksimum: **6 per misi**, **24 total**.
+- **Nilai = (skor ÷ 24) × 100**
+
+| Nilai | Predikat |
+|---|---|
+| 90 – 100 | A (Sangat Baik) |
+| 75 – 89 | B (Baik) |
+| 60 – 74 | C (Cukup) |
+| < 60 | D (Perlu Bimbingan) |
+
+---
+
+## 🧪 Menjalankan Pengujian
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## Struktur Kode
-
-```
-main.py        # Tampilan (GUI Tkinter): menu, misi per tahap, hasil, materi, papan skor
-soal.py        # 4 misi sesuai kisi-kisi + generator soal acak + pembahasan per tahap
-permainan.py   # Logika permainan: alur misi/tahap, skor per tahap, nilai & predikat
-materi.py      # Ringkasan materi persentase untung dan rugi
-skor.py        # Simpan/muat papan skor (JSON)
-tests/         # Unit test
-```
-
 ---
-Dibuat dengan bantuan VS Code + Claude Code.
+
+Dibuat menggunakan **VS Code** dan **Claude Code**, dengan bahasa pemrograman **Python**.
