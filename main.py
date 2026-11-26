@@ -11,18 +11,20 @@ from permainan import MODE, Permainan, bintang, predikat
 from skor import muat_skor, tambah_skor
 from soal import parse_angka
 
-BG = "#FFF8EC"
+# Tema biru
+BG = "#EEF5FD"       # latar biru sangat muda
 KARTU = "#FFFFFF"
-LEMBUT = "#FFF1DC"
-GARIS = "#E8DCC8"
-TEKS = "#2D2A26"
-REDUP = "#7A7268"
-UTAMA = "#E07A1F"
-HIJAU = "#2E9E5B"
-MERAH = "#D64545"
-BIRU = "#2F6FB3"
-UNGU = "#7A4FB5"
-WARNA_INDIKATOR = [BIRU, UNGU, HIJAU, MERAH]
+LEMBUT = "#E3EEFB"   # latar pilihan jawaban
+GARIS = "#C9DCF2"
+TEKS = "#1C2B3A"
+REDUP = "#5B6B7D"
+UTAMA = "#1E6FD9"    # biru utama
+BIRU = "#0B4F9C"     # biru tua
+LANGIT = "#1590C9"   # biru langit
+NILA = "#4B63D1"     # biru nila
+HIJAU = "#2E9E5B"    # khusus tanda jawaban benar
+MERAH = "#D64545"    # khusus tanda jawaban salah
+WARNA_INDIKATOR = [UTAMA, NILA, LANGIT, BIRU]
 
 FONT = "Segoe UI"
 
@@ -125,9 +127,9 @@ class Aplikasi(tk.Tk):
 
         for teks, cmd, warna in [
             ("📝  Soal Kisi-kisi (4 Misi)", lambda: self.mulai("kisi"), UTAMA),
-            ("🎲  Latihan Soal Acak", lambda: self.mulai("acak"), HIJAU),
+            ("🎲  Latihan Soal Acak", lambda: self.mulai("acak"), LANGIT),
             ("📖  Pelajari Materi", self.tampil_materi, BIRU),
-            ("🏆  Papan Skor", self.tampil_papan_skor, UNGU),
+            ("🏆  Papan Skor", self.tampil_papan_skor, NILA),
             ("✖  Keluar", self.destroy, REDUP),
         ]:
             self.tombol(f, teks, cmd, warna, width=24).pack(pady=5)
@@ -194,7 +196,7 @@ class Aplikasi(tk.Tk):
 
         bawah = tk.Frame(f, bg=BG)
         bawah.pack(fill="x", pady=(12, 0))
-        self.btn_periksa = self.tombol(bawah, "Periksa Jawaban", self.periksa, HIJAU, size=12)
+        self.btn_periksa = self.tombol(bawah, "Periksa Jawaban", self.periksa, LANGIT, size=12)
         self.btn_periksa.pack(side="left")
         self.btn_lanjut = self.tombol(bawah, "Lanjut →", self.lanjut, UTAMA, size=12)
         self.btn_lanjut.pack(side="right")
@@ -382,11 +384,11 @@ class Aplikasi(tk.Tk):
         self.label(f, saran, size=11, fg=TEKS, wraplength=self.px(820)).pack(pady=(12, 2))
         if peringkat:
             self.label(f, f"Kamu masuk papan skor di peringkat #{peringkat}!",
-                       size=11, bold=True, fg=UNGU).pack()
+                       size=11, bold=True, fg=NILA).pack()
 
         tombol = tk.Frame(f, bg=BG)
         tombol.pack(pady=14)
-        self.tombol(tombol, "Ulangi", lambda: self.mulai(p.mode), HIJAU).pack(side="left", padx=6)
+        self.tombol(tombol, "Ulangi", lambda: self.mulai(p.mode), LANGIT).pack(side="left", padx=6)
         self.tombol(tombol, "Latihan Acak", lambda: self.mulai("acak"), BIRU).pack(side="left", padx=6)
         self.tombol(tombol, "Menu", self.tampil_menu, REDUP).pack(side="left", padx=6)
 
@@ -428,7 +430,7 @@ class Aplikasi(tk.Tk):
 
     def tampil_papan_skor(self):
         f = self.ganti_layar()
-        self.label(f, "🏆 Papan Skor", size=22, bold=True, fg=UNGU).pack(pady=(10, 16))
+        self.label(f, "🏆 Papan Skor", size=22, bold=True, fg=NILA).pack(pady=(10, 16))
 
         tabel = tk.Frame(f, bg=KARTU, highlightbackground=GARIS, highlightthickness=1)
         tabel.pack(fill="x", padx=60)

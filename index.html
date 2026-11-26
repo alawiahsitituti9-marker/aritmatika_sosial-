@@ -8,20 +8,20 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 <style>
   :root {
-    --bg: #FFF8EC; --kartu: #FFFFFF; --lembut: #FFF1DC; --garis: #E8DCC8;
-    --teks: #2D2A26; --redup: #7A7268; --utama: #E07A1F; --hijau: #2E9E5B;
-    --merah: #D64545; --biru: #2F6FB3; --ungu: #7A4FB5;
+    --bg: #EEF5FD; --kartu: #FFFFFF; --lembut: #E3EEFB; --garis: #C9DCF2;
+    --teks: #1C2B3A; --redup: #5B6B7D; --utama: #1E6FD9; --hijau: #2E9E5B;
+    --merah: #D64545; --biru: #0B4F9C; --langit: #1590C9; --nila: #4B63D1;
     --hijau-muda: #DFF3E6; --merah-muda: #FBE3E3;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #1E1B18; --kartu: #2A2622; --lembut: #362F27; --garis: #4A4138;
-      --teks: #F3EDE4; --redup: #B5AA9C; --hijau-muda: #1F3B2B; --merah-muda: #43262A;
+      --bg: #0F1724; --kartu: #172234; --lembut: #1E2D44; --garis: #2C3F5C;
+      --teks: #E6EEF8; --redup: #9DB0C8; --hijau-muda: #1F3B2B; --merah-muda: #43262A; --biru: #5B9BEA;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #1E1B18; --kartu: #2A2622; --lembut: #362F27; --garis: #4A4138;
-    --teks: #F3EDE4; --redup: #B5AA9C; --hijau-muda: #1F3B2B; --merah-muda: #43262A;
+    --bg: #0F1724; --kartu: #172234; --lembut: #1E2D44; --garis: #2C3F5C;
+    --teks: #E6EEF8; --redup: #9DB0C8; --hijau-muda: #1F3B2B; --merah-muda: #43262A; --biru: #5B9BEA;
   }
   * { box-sizing: border-box; }
   body {
@@ -35,13 +35,13 @@
   .kecil { font-size: .85rem; color: var(--redup); }
   .tombol {
     display: inline-block; border: 0; border-radius: 6px; padding: 12px 22px; cursor: pointer;
-    font: 600 1rem inherit; font-family: inherit; color: #fff; background: var(--utama);
+    font-family: inherit; font-weight: 600; font-size: 1rem; color: #fff; background: var(--utama);
   }
   .tombol:hover:not(:disabled) { filter: brightness(1.08); }
   .tombol:disabled { opacity: .45; cursor: not-allowed; }
   .tombol:focus-visible, input:focus-visible, .opsi:focus-within { outline: 3px solid var(--biru); outline-offset: 2px; }
-  .hijau { background: var(--hijau); } .biru { background: var(--biru); }
-  .ungu { background: var(--ungu); } .abu { background: #7A7268; }
+  .langit { background: var(--langit); } .biru { background: var(--biru); }
+  .nila { background: var(--nila); } .abu { background: #5B6B7D; }
   .menu-tombol { display: flex; flex-direction: column; gap: 10px; max-width: 340px; margin: 0 auto; }
   .nama { margin-bottom: 18px; }
   .nama input, .isian input {
@@ -107,7 +107,7 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>
-const WARNA = ["var(--biru)", "var(--ungu)", "var(--hijau)", "var(--merah)"];
+const WARNA = ["var(--utama)", "var(--nila)", "var(--langit)", "var(--biru)"];
 const app = document.getElementById("app");
 let py, api, st, dijawab = false, nama = "Pemain";
 
@@ -144,9 +144,9 @@ function menu() {
       <div class="nama"><label>Nama pemain: <input id="nama" maxlength="30" value="${esc(nama)}"></label></div>
       <div class="menu-tombol">
         <button class="tombol" onclick="mulai('kisi')">📝 Soal Kisi-kisi (4 Misi)</button>
-        <button class="tombol hijau" onclick="mulai('acak')">🎲 Latihan Soal Acak</button>
+        <button class="tombol langit" onclick="mulai('acak')">🎲 Latihan Soal Acak</button>
         <button class="tombol biru" onclick="materi()">📖 Pelajari Materi</button>
-        <button class="tombol ungu" onclick="papanSkor()">🏆 Papan Skor</button>
+        <button class="tombol nila" onclick="papanSkor()">🏆 Papan Skor</button>
       </div>
       <p class="kecil catatan">4 misi sesuai indikator Mathematical Literacy • dikerjakan per tahap • skor maksimum 6 per misi<br>
       Logika game ditulis dengan <b>Python</b> dan dijalankan langsung di browser.</p>
@@ -223,7 +223,7 @@ function layarTahap() {
     <div class="hasil" id="hasil" aria-live="polite"></div>
     <div class="bahas tersembunyi" id="bahas"></div>
     <div class="aksi">
-      <button class="tombol hijau" id="periksa" onclick="periksa()">Periksa Jawaban</button>
+      <button class="tombol langit" id="periksa" onclick="periksa()">Periksa Jawaban</button>
       <button class="tombol" id="lanjut" onclick="lanjut()" disabled>Lanjut →</button>
     </div>`;
   perbaruiStatus();
@@ -319,8 +319,8 @@ function hasilAkhir() {
     </div>
     <div class="tengah">
       <p>${lemah.length ? "Perlu latihan lagi pada: " + esc(lemah.join("; ")) + "." : "Sempurna! Semua indikator literasi matematika tercapai."}</p>
-      ${peringkat ? `<p style="color:var(--ungu);font-weight:700">Kamu masuk papan skor di peringkat #${peringkat}!</p>` : ""}
-      <button class="tombol hijau" onclick="mulai('${st.mode === "Soal Kisi-kisi" ? "kisi" : "acak"}')">Ulangi</button>
+      ${peringkat ? `<p style="color:var(--nila);font-weight:700">Kamu masuk papan skor di peringkat #${peringkat}!</p>` : ""}
+      <button class="tombol langit" onclick="mulai('${st.mode === "Soal Kisi-kisi" ? "kisi" : "acak"}')">Ulangi</button>
       <button class="tombol biru" onclick="mulai('acak')">Latihan Acak</button>
       <button class="tombol abu" onclick="menu()">Menu</button>
     </div>`;
@@ -350,7 +350,7 @@ function tampilMateri(i) {
 function papanSkor() {
   const data = bacaLokal("uc-skor", []);
   app.innerHTML = `
-    <h1 style="color:var(--ungu);font-size:1.8rem" class="tengah">🏆 Papan Skor</h1>
+    <h1 style="color:var(--nila);font-size:1.8rem" class="tengah">🏆 Papan Skor</h1>
     <p class="kecil tengah">Skor tersimpan di browser perangkat ini.</p>
     <div class="kartu tabel-gulir">
       <table>
