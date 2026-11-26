@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UntungCerdas</title>
-<meta name="description" content="Game literasi matematika persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT) dan tutor AI DeepSeek. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
+<meta name="description" content="Game literasi matematika persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT) dan tutor AI Google Gemini. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 <style>
   :root {
@@ -134,7 +134,7 @@ const $ = id => document.getElementById(id);
 
 function simpanLokal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function bacaLokal(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
-const cfgAI = () => bacaLokal("uc-ai", { penyedia: "openrouter", api_key: "", model: "" });
+const cfgAI = () => { const c = bacaLokal("uc-ai", { penyedia: "gemini", api_key: "", model: "" }); if (c.penyedia !== "gemini") { c.penyedia = "gemini"; c.api_key = ""; c.model = ""; } return c; };
 
 async function mulaiPython() {
   try {
@@ -445,7 +445,7 @@ function selesaiRefleksi() {
 async function mintaAI() {
   const cfg = cfgAI();
   if (!cfg.api_key) {
-    if (confirm("API key DeepSeek belum diisi. Buka Pengaturan AI sekarang?")) pengaturanAI();
+    if (confirm("API key Gemini belum diisi. Buka Pengaturan AI sekarang?")) pengaturanAI();
     return;
   }
   let jenis, data = "-1", judul;
@@ -476,12 +476,11 @@ async function kirimAI(req, key) {
       headers: { ...req.headers, Authorization: "Bearer " + key.trim() },
       body: JSON.stringify(req.body),
     });
-    if (!r.ok) return "⚠️ " + api.galat_http(r.status);
+    if (!r.ok) return "⚠️ " + api.galat_http(r.status, await r.text());
     const h = JSON.parse(api.ambil_teks_ai(await r.text()));
     return h.error ? "⚠️ " + h.error : h.teks;
   } catch (e) {
-    return "⚠️ Tidak dapat terhubung ke server AI. Periksa koneksi internet. Jika memakai DeepSeek resmi " +
-           "dan tetap gagal, server mungkin menolak akses dari browser — coba penyedia OpenRouter.";
+    return "⚠️ Tidak dapat terhubung ke server AI. Periksa koneksi internet, lalu coba lagi.";
   }
 }
 
@@ -492,7 +491,7 @@ function pengaturanAI() {
   lapisan.innerHTML = `
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="judul-ai">
       <h2 id="judul-ai" style="color:var(--utama);margin:0">⚙️ Pengaturan Tutor AI</h2>
-      <p class="kecil">Masukkan API key DeepSeek agar aplikasi bisa memberi mediasi, diagnosis, dan tanggapan refleksi.
+      <p class="kecil">Masukkan API key <b>Google Gemini</b> (gratis, buat di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>) agar aplikasi bisa memberi mediasi, diagnosis, dan tanggapan refleksi.
         Key hanya disimpan di browser perangkat ini dan tidak dikirim ke mana pun selain penyedia AI yang dipilih.</p>
       <label for="ai-penyedia">Penyedia</label>
       <select id="ai-penyedia">${Object.entries(penyedia).map(([k, v]) =>

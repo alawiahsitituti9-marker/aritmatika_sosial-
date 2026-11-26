@@ -576,7 +576,7 @@ class Aplikasi(tk.Tk):
         """Mediasi AI (sebelum/saat mediasi), diagnosis AI (sesudah), atau tanggapan refleksi."""
         if not ai_tutor.siap(self.cfg_ai):
             if messagebox.askyesno("Tutor AI belum aktif",
-                                   "API key DeepSeek belum diisi.\nBuka Pengaturan AI sekarang?"):
+                                   "API key Gemini belum diisi.\nBuka Pengaturan AI sekarang?"):
                 self.pengaturan_ai()
             return
         p = self.permainan
@@ -641,7 +641,7 @@ class Aplikasi(tk.Tk):
 
     def pengaturan_ai(self):
         win = tk.Toplevel(self)
-        win.title("Pengaturan Tutor AI (DeepSeek)")
+        win.title("Pengaturan Tutor AI (Google Gemini)")
         win.configure(bg=BG)
         win.transient(self)
         win.grab_set()
@@ -649,7 +649,7 @@ class Aplikasi(tk.Tk):
         f.pack(fill="both", expand=True, padx=20, pady=16)
 
         self.label(f, "⚙️ Pengaturan Tutor AI", size=16, bold=True, fg=UTAMA).pack(anchor="w")
-        self.label(f, "Masukkan API key DeepSeek agar aplikasi bisa memberi petunjuk dan "
+        self.label(f, "Masukkan API key Google Gemini (gratis di aistudio.google.com/apikey) agar aplikasi bisa memberi mediasi dan "
                       "penjelasan cerdas. Key hanya disimpan di komputer ini (config_ai.json) "
                       "dan tidak ikut diunggah ke GitHub.", size=10, fg=REDUP,
                    wraplength=self.px(460), justify="left").pack(anchor="w", pady=(2, 12))

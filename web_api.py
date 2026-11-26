@@ -167,8 +167,8 @@ def ambil_teks_ai(data_json: str) -> str:
         return json.dumps({"error": str(e) or "Respons AI tidak dapat dibaca."})
 
 
-def galat_http(kode: int) -> str:
-    return ai_tutor.pesan_galat_http(int(kode))
+def galat_http(kode: int, isi: str = "") -> str:
+    return ai_tutor.pesan_galat_http(int(kode), isi or "")
 
 
 def daftar_penyedia() -> str:

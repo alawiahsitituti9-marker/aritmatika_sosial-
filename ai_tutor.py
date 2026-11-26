@@ -1,17 +1,18 @@
-"""Tutor AI UntungCerdas (DeepSeek).
+"""Tutor AI UntungCerdas (Google Gemini).
 
-Menghubungkan aplikasi ke model AI DeepSeek agar aplikasi bisa:
-  • memberi PETUNJUK bertahap tanpa membocorkan jawaban, dan
-  • MENJELASKAN jawaban siswa (mengapa benar/salah) secara personal.
+Menghubungkan aplikasi ke model AI Google Gemini agar aplikasi bisa berperan
+sebagai MEDIATOR RMT:
+  • memberi pertanyaan terpimpin (mediasi) tanpa membocorkan jawaban,
+  • mendiagnosis fase kognitif yang menyulitkan siswa, dan
+  • menanggapi refleksi metakognisi siswa.
 
-Dua penyedia didukung (keduanya memakai format API yang kompatibel OpenAI):
-  - "deepseek"   : API resmi DeepSeek  — https://platform.deepseek.com
-  - "openrouter" : OpenRouter, menyediakan model DeepSeek gratis (":free")
-                   — https://openrouter.ai
+Aplikasi memakai endpoint Gemini yang kompatibel dengan format OpenAI:
+  https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+API key Gemini GRATIS dibuat di Google AI Studio: https://aistudio.google.com/apikey
 
-API key TIDAK disimpan di kode. Key dibaca dari file `config_ai.json`
+API key TIDAK disimpan di kode. Key dibaca dari file config_ai.json
 (sudah masuk .gitignore sehingga tidak ikut terunggah ke GitHub) atau dari
-variabel lingkungan DEEPSEEK_API_KEY / OPENROUTER_API_KEY.
+variabel lingkungan GEMINI_API_KEY.
 """
 
 import json
@@ -25,19 +26,14 @@ import rmt
 FILE_CONFIG = Path(__file__).with_name("config_ai.json")
 
 PENYEDIA = {
-    "deepseek": {
-        "nama": "DeepSeek (platform.deepseek.com)",
-        "url": "https://api.deepseek.com/chat/completions",
-        "model": "deepseek-chat",
-        "env": "DEEPSEEK_API_KEY",
-    },
-    "openrouter": {
-        "nama": "OpenRouter — model DeepSeek gratis",
-        "url": "https://openrouter.ai/api/v1/chat/completions",
-        "model": "deepseek/deepseek-chat-v3-0324:free",
-        "env": "OPENROUTER_API_KEY",
+    "gemini": {
+        "nama": "Google Gemini (aistudio.google.com)",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "model": "gemini-flash-latest",
+        "env": "GEMINI_API_KEY",
     },
 }
+PENYEDIA_BAWAAN = "gemini"
 
 SISTEM = """Kamu adalah "Tutor UntungCerdas", MEDIATOR kognitif untuk siswa SMP kelas VII yang
 belajar persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT, Kinard & Kozulin).
@@ -70,15 +66,15 @@ class AIError(Exception):
 # ------------------------------------------------------------- konfigurasi --
 
 def muat_config(path: Path = FILE_CONFIG) -> dict:
-    cfg = {"penyedia": "deepseek", "api_key": "", "model": ""}
+    cfg = {"penyedia": PENYEDIA_BAWAAN, "api_key": "", "model": ""}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, dict):
             cfg.update({k: str(v) for k, v in data.items() if k in cfg})
     except (OSError, ValueError):
         pass
-    if cfg["penyedia"] not in PENYEDIA:
-        cfg["penyedia"] = "deepseek"
+    if cfg["penyedia"] not in PENYEDIA:  # mis. konfigurasi lama (DeepSeek)
+        cfg["penyedia"] = PENYEDIA_BAWAAN
     if not cfg["api_key"]:
         cfg["api_key"] = os.environ.get(PENYEDIA[cfg["penyedia"]]["env"], "")
     return cfg
@@ -194,18 +190,18 @@ def pesan_tanya(pertanyaan: str, misi=None, tahap=None) -> list:
 
 def buat_permintaan(cfg: dict, pesan: list, maks_token: int = 400):
     """Kembalikan (url, headers, body) untuk API chat completions."""
-    p = PENYEDIA.get(cfg.get("penyedia"), PENYEDIA["deepseek"])
+    p = PENYEDIA.get(cfg.get("penyedia"), PENYEDIA[PENYEDIA_BAWAAN])
     body = {
         "model": cfg.get("model") or p["model"],
         "messages": pesan,
         "temperature": 0.4,
-        "max_tokens": maks_token,
+        # Model Gemini terbaru "berpikir" dulu dan token berpikir ikut dihitung,
+        # jadi diberi ruang tambahan agar jawabannya tidak terpotong/kosong.
+        "max_tokens": maks_token + 2048,
         "stream": False,
     }
     headers = {"Content-Type": "application/json",
                "Authorization": f"Bearer {cfg.get('api_key', '').strip()}"}
-    if cfg.get("penyedia") == "openrouter":
-        headers["X-Title"] = "UntungCerdas"
     return p["url"], headers, body
 
 
@@ -215,17 +211,26 @@ def ambil_teks(data: dict) -> str:
     except (KeyError, IndexError, TypeError):
         pesan = (data.get("error") or {}).get("message") if isinstance(data, dict) else None
         raise AIError(f"Respons AI tidak dikenali{': ' + pesan if pesan else '.'}")
-    return (teks or "").strip()
+    teks = (teks or "").strip()
+    if not teks:
+        raise AIError("AI tidak memberi jawaban. Coba klik tombol AI sekali lagi.")
+    return teks
 
 
-def pesan_galat_http(kode: int) -> str:
+def pesan_galat_http(kode: int, isi: str = "") -> str:
+    """Pesan ramah untuk kode galat HTTP. Gemini memakai kode 400 untuk API key salah."""
+    if any(k in isi for k in ("API_KEY_INVALID", "API key not valid", "API key expired",
+                              "valid API key")):
+        return "API key Gemini tidak valid. Salin ulang key dari Google AI Studio."
+    if "location is not supported" in isi.lower():
+        return "Layanan Gemini belum tersedia di lokasi/jaringan ini."
     return {
-        400: "Permintaan ditolak server AI (periksa nama model di Pengaturan AI).",
+        400: "Permintaan ditolak server AI (periksa API key dan nama model di Pengaturan AI).",
         401: "API key tidak valid. Periksa kembali API key di Pengaturan AI.",
-        402: "Saldo/kuota akun AI habis. Isi saldo atau gunakan penyedia gratis (OpenRouter).",
+        402: "Kuota akun AI habis. Coba lagi nanti atau periksa akun Google AI Studio.",
         403: "Akses ditolak oleh server AI. Periksa API key dan izin akun.",
         404: "Model AI tidak ditemukan. Periksa nama model di Pengaturan AI.",
-        429: "Terlalu banyak permintaan atau kuota gratis habis. Coba lagi beberapa saat lagi.",
+        429: "Batas kuota gratis Gemini tercapai. Tunggu sekitar 1 menit, lalu coba lagi.",
     }.get(kode, f"Server AI sedang bermasalah (kode {kode}). Coba lagi nanti.")
 
 
@@ -240,7 +245,11 @@ def panggil(cfg: dict, pesan: list, timeout: int = 60, maks_token: int = 400) ->
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        raise AIError(pesan_galat_http(e.code)) from None
+        try:
+            isi = e.read().decode("utf-8", "replace")
+        except OSError:
+            isi = ""
+        raise AIError(pesan_galat_http(e.code, isi)) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise AIError("Tidak dapat terhubung ke server AI. Periksa koneksi internet.") from None
     except ValueError:

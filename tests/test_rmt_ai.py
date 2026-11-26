@@ -91,7 +91,7 @@ class TestAsesmenDinamis(unittest.TestCase):
 
 
 class _ServerTiruan(BaseHTTPRequestHandler):
-    """Meniru API chat completions (format OpenAI/DeepSeek)."""
+    """Meniru endpoint Gemini yang kompatibel OpenAI."""
     diterima = {}
 
     def do_POST(self):
@@ -99,8 +99,10 @@ class _ServerTiruan(BaseHTTPRequestHandler):
         _ServerTiruan.diterima = {"auth": self.headers.get("Authorization"),
                                   "body": json.loads(self.rfile.read(panjang))}
         if self.headers.get("Authorization") == "Bearer salah":
-            self.send_response(401)
+            isi = b'[{"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.", "status": "INVALID_ARGUMENT", "details": [{"reason": "API_KEY_INVALID"}]}}]'
+            self.send_response(400)
             self.end_headers()
+            self.wfile.write(isi)
             return
         data = {"choices": [{"message": {"role": "assistant", "content": " Coba susun tabel. "}}]}
         isi = json.dumps(data).encode()
@@ -120,31 +122,34 @@ class TestAITutor(unittest.TestCase):
         cls.server = HTTPServer(("127.0.0.1", 0), _ServerTiruan)
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.url = f"http://127.0.0.1:{cls.server.server_port}/chat/completions"
-        cls.asli = ai_tutor.PENYEDIA["deepseek"]["url"]
-        ai_tutor.PENYEDIA["deepseek"]["url"] = cls.url
+        cls.asli = ai_tutor.PENYEDIA["gemini"]["url"]
+        ai_tutor.PENYEDIA["gemini"]["url"] = cls.url
 
     @classmethod
     def tearDownClass(cls):
-        ai_tutor.PENYEDIA["deepseek"]["url"] = cls.asli
+        ai_tutor.PENYEDIA["gemini"]["url"] = cls.asli
         cls.server.shutdown()
 
     def setUp(self):
         self.misi = misi_kisi_kisi(random.Random(0))
 
     def test_panggil_berhasil(self):
-        cfg = {"penyedia": "deepseek", "api_key": "kunci-uji", "model": ""}
+        cfg = {"penyedia": "gemini", "api_key": "kunci-uji", "model": ""}
         pesan = ai_tutor.pesan_petunjuk(self.misi[0], self.misi[0].tahapan[2])
         self.assertEqual(ai_tutor.panggil(cfg, pesan), "Coba susun tabel.")
         self.assertEqual(_ServerTiruan.diterima["auth"], "Bearer kunci-uji")
         body = _ServerTiruan.diterima["body"]
-        self.assertEqual(body["model"], "deepseek-chat")
+        self.assertEqual(body["model"], "gemini-flash-latest")
+        self.assertIn("generativelanguage.googleapis.com", self.asli)
         self.assertEqual(body["messages"][0]["role"], "system")
 
     def test_key_salah_dan_key_kosong(self):
-        with self.assertRaisesRegex(ai_tutor.AIError, "API key tidak valid"):
-            ai_tutor.panggil({"penyedia": "deepseek", "api_key": "salah"}, [])
+        with self.assertRaisesRegex(ai_tutor.AIError, "API key Gemini tidak valid"):
+            ai_tutor.panggil({"penyedia": "gemini", "api_key": "salah"}, [])
         with self.assertRaisesRegex(ai_tutor.AIError, "belum diisi"):
-            ai_tutor.panggil({"penyedia": "deepseek", "api_key": ""}, [])
+            ai_tutor.panggil({"penyedia": "gemini", "api_key": ""}, [])
+        with self.assertRaisesRegex(ai_tutor.AIError, "tidak memberi jawaban"):
+            ai_tutor.ambil_teks({"choices": [{"message": {"content": ""}}]})
 
     def test_prompt_rmt(self):
         m, t = self.misi[3], self.misi[3].tahapan[2]
@@ -161,18 +166,22 @@ class TestAITutor(unittest.TestCase):
     def test_config_tidak_bocor_dan_tersimpan(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "config_ai.json"
-            self.assertEqual(ai_tutor.muat_config(path)["penyedia"], "deepseek")
-            ai_tutor.simpan_config({"penyedia": "openrouter", "api_key": "abc", "model": ""}, path)
+            self.assertEqual(ai_tutor.muat_config(path)["penyedia"], "gemini")
+            ai_tutor.simpan_config({"penyedia": "gemini", "api_key": "abc", "model": ""}, path)
             cfg = ai_tutor.muat_config(path)
-            self.assertEqual((cfg["penyedia"], cfg["api_key"]), ("openrouter", "abc"))
+            self.assertEqual((cfg["penyedia"], cfg["api_key"]), ("gemini", "abc"))
+            # konfigurasi lama DeepSeek otomatis beralih ke Gemini
+            ai_tutor.simpan_config({"penyedia": "deepseek", "api_key": "x", "model": ""}, path)
+            self.assertEqual(ai_tutor.muat_config(path)["penyedia"], "gemini")
         gitignore = (Path(__file__).resolve().parent.parent / ".gitignore").read_text()
         self.assertIn("config_ai.json", gitignore)
 
     def test_web_api_tidak_mengirim_key(self):
         web_api.mulai("kisi")
-        req = json.loads(web_api.permintaan_ai("petunjuk", "-1", "openrouter", ""))
+        req = json.loads(web_api.permintaan_ai("petunjuk", "-1", "gemini", ""))
         self.assertNotIn("Authorization", req["headers"])
-        self.assertTrue(req["body"]["model"].startswith("deepseek/"))
+        self.assertTrue(req["body"]["model"].startswith("gemini"))
+        self.assertEqual(req["url"], ai_tutor.PENYEDIA["gemini"]["url"])
         teks = json.loads(web_api.ambil_teks_ai(json.dumps(
             {"choices": [{"message": {"content": "Halo"}}]})))
         self.assertEqual(teks["teks"], "Halo")

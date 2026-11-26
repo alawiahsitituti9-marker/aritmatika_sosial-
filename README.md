@@ -5,7 +5,7 @@ Siswa berperan sebagai pedagang dan menyelesaikan soal-soal untung dan rugi
 **tahap demi tahap**.
 
 - **Model pembelajaran:** *Rigorous Mathematical Thinking* (RMT), Kinard & Kozulin.
-- **Kecerdasan buatan:** tutor AI **DeepSeek** yang berperan sebagai *mediator* RMT.
+- **Kecerdasan buatan:** tutor AI **Google Gemini** yang berperan sebagai *mediator* RMT.
 
 ## ▶️ Mainkan Langsung di Browser
 
@@ -75,29 +75,33 @@ Orientasi (MLE) → Tahap 1…6 [Input → Elaborasi → Output] → Refleksi & 
 
 ---
 
-## 🤖 Kecerdasan AI (DeepSeek)
+## 🤖 Kecerdasan AI (Google Gemini)
 
-Aplikasi terhubung ke model AI **DeepSeek**. AI berperan sebagai **mediator RMT**, bukan pemberi
-jawaban:
+Aplikasi terhubung ke model AI **Google Gemini**. AI berperan sebagai **mediator RMT**, bukan
+pemberi jawaban:
 
 - **🤖 Mediator AI** (sebelum atau saat mediasi): memberi pertanyaan terpimpin yang sesuai fase kognitif tahap itu, tanpa menyebut jawaban.
 - **🤖 Diagnosis AI** (setelah menjawab): mendiagnosis fase kesulitan siswa (Input, Elaborasi, atau Output) dan miskonsepsinya, lalu menutup dengan transendensi.
 - **🤖 Tanggapan AI atas Refleksi**: menanggapi refleksi metakognisi siswa di akhir misi.
 
-### Cara mengaktifkan
-1. Dapatkan **API key**. Ada dua pilihan penyedia:
-   - **DeepSeek resmi**: https://platform.deepseek.com, menu *API Keys*.
-   - **OpenRouter**: https://openrouter.ai, menyediakan model DeepSeek **gratis** (model berakhiran `:free`).
-2. Buka aplikasi, klik **⚙️ Pengaturan AI**, pilih penyedia, lalu tempel API key.
-3. Klik **Tes Koneksi**, lalu **Simpan**.
+### Cara mendapatkan API key Gemini (gratis)
+1. Buka **https://aistudio.google.com/apikey** dan masuk dengan **akun Google** (Gmail).
+2. Setujui persyaratan penggunaan jika diminta, lalu klik **Create API key**.
+3. Salin key yang muncul (biasanya diawali `AIza...`).
+
+### Cara mengaktifkan di aplikasi
+1. Buka aplikasi, lalu klik **⚙️ Pengaturan AI**.
+2. Tempel API key Gemini.
+3. Klik **Tes Koneksi**. Jika muncul ✔, klik **Simpan**.
+
+Model bawaan: `gemini-flash-latest`. Model bisa diganti di kolom **Model** pada Pengaturan AI.
+Aplikasi memakai endpoint Gemini yang kompatibel dengan format OpenAI
+(`generativelanguage.googleapis.com/v1beta/openai/chat/completions`).
 
 > 🔒 **Keamanan API key:** key **tidak** ditulis di kode dan **tidak** ikut terunggah ke GitHub.
 > Di versi desktop, key disimpan di file `config_ai.json` (sudah masuk `.gitignore`) atau dibaca
-> dari variabel lingkungan `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY`. Di versi web, key disimpan
-> di browser perangkat masing-masing. Jangan membagikan API key kepada orang lain.
->
-> Untuk versi web disarankan memakai **OpenRouter**, karena server DeepSeek resmi mungkin menolak
-> permintaan yang dikirim langsung dari browser.
+> dari variabel lingkungan `GEMINI_API_KEY`. Di versi web, key disimpan di browser perangkat
+> masing-masing. Jangan membagikan API key kepada orang lain.
 
 Tanpa API key, aplikasi tetap bisa dimainkan sepenuhnya. Mediasi bertingkat 🧭 tetap tersedia
 karena sudah tertulis di aplikasi.
@@ -154,7 +158,7 @@ karena sudah tertulis di aplikasi.
 1. **Menentukan materi dan tujuan**: persentase untung dan rugi dengan 4 indikator literasi matematika.
 2. **Merancang soal dan tahapan penyelesaian**: setiap soal dipecah menjadi 5–6 tahap, dan tiap tahap diberi skor.
 3. **Menerapkan model RMT** berdasarkan ringkasan buku Kinard & Kozulin: orientasi MLE, fase kognitif, mediasi bertingkat, asesmen dinamis, refleksi, dan transendensi (`rmt.py`).
-4. **Menambahkan kecerdasan AI DeepSeek** sebagai mediator RMT (`ai_tutor.py`).
+4. **Menambahkan kecerdasan AI Google Gemini** sebagai mediator RMT (`ai_tutor.py`).
 5. **Menulis kode** dengan Python di VS Code, dibantu Claude Code:
    - logika soal (`soal.py`)
    - logika permainan, penilaian, dan uji ulang (`permainan.py`)
@@ -176,7 +180,7 @@ aritmatika_sosial-/
 ├── main.py            # Versi desktop: tampilan game (GUI Tkinter)
 ├── soal.py            # Bank soal: 4 misi, tahapan, kunci jawaban, pembahasan
 ├── rmt.py             # Model RMT: orientasi MLE, fase kognitif, mediasi, profil diagnostik
-├── ai_tutor.py        # Tutor AI DeepSeek (mediator RMT)
+├── ai_tutor.py        # Tutor AI Google Gemini (mediator RMT)
 ├── permainan.py       # Logika permainan: urutan misi/tahap, skor, nilai, predikat
 ├── materi.py          # Ringkasan materi untung dan rugi
 ├── skor.py            # Penyimpanan papan skor (file JSON)
@@ -197,7 +201,7 @@ aritmatika_sosial-/
 | `materi.py` | Teks materi: harga beli & jual, untung dan rugi, persentase, menentukan harga jual, dan kesalahan umum. |
 | `skor.py` | Menyimpan dan membaca 10 skor tertinggi di file `skor_tertinggi.json`. |
 | `rmt.py` | Data model RMT: tujuan, makna, analisis tugas, transendensi tiap misi, serta fase kognitif, operasi mental, alat psikologis, dan pertanyaan mediasi tiap tahap. Juga menghitung profil fungsi kognitif. |
-| `ai_tutor.py` | Menghubungkan aplikasi ke API DeepSeek/OpenRouter dan menyusun prompt mediator RMT (mediasi, diagnosis, tanggapan refleksi). |
+| `ai_tutor.py` | Menghubungkan aplikasi ke API Google Gemini dan menyusun prompt mediator RMT (mediasi, diagnosis, tanggapan refleksi). |
 | `index.html` | Halaman web game. Memuat Python di browser (Pyodide) lalu menjalankan `soal.py`, `permainan.py`, dan `materi.py` yang sama. |
 | `web_api.py` | Penghubung antara halaman web dan logika game Python. |
 | `tests/` | Menguji kunci jawaban, penilaian, data RMT, uji ulang, dan tutor AI (dengan server AI tiruan). |
