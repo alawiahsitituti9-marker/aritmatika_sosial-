@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>UntungCerdas</title>
-<meta name="description" content="Game literasi matematika: persentase untung dan rugi. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
+<meta name="description" content="Game literasi matematika persentase untung dan rugi dengan model Rigorous Mathematical Thinking (RMT) dan tutor AI DeepSeek. Logika game ditulis dengan Python dan dijalankan di browser dengan Pyodide.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
 <style>
   :root {
@@ -94,6 +94,21 @@
   @keyframes putar { to { transform: rotate(360deg); } }
   .catatan { margin-top: 28px; }
   .tersembunyi { display: none !important; }
+  .rmt-kotak { background: var(--lembut); border-radius: 8px; padding: 8px 12px; margin: 8px 0 4px; font-size: .88rem; }
+  .rmt-kotak b { color: var(--biru); }
+  .mediasi { white-space: pre-line; background: color-mix(in srgb, var(--nila) 12%, var(--kartu)); border-left: 4px solid var(--nila); border-radius: 8px; padding: 10px 12px; margin: 6px 0; }
+  .ai { white-space: pre-line; background: var(--lembut); border-left: 4px solid var(--utama); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .bagian h3 { color: var(--biru); font-size: 1.02rem; margin: 14px 0 2px; }
+  .bagian p { margin: 0; }
+  .pilihan-refleksi label { display: block; padding: 4px 0; cursor: pointer; }
+  .profil-baris { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr) 90px; gap: 10px; align-items: center; margin: 6px 0; font-size: .92rem; }
+  @media (max-width: 760px) { .profil-baris { grid-template-columns: 1fr; gap: 2px; } }
+  .batang { height: 12px; background: var(--garis); border-radius: 6px; overflow: hidden; }
+  .batang span { display: block; height: 100%; background: var(--utama); }
+  .lapisan { position: fixed; inset: 0; background: rgba(10, 20, 40, .55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .dialog { background: var(--kartu); color: var(--teks); border-radius: 12px; padding: 20px; max-width: 520px; width: 100%; max-height: 90vh; overflow: auto; }
+  .dialog label { display: block; margin-top: 10px; font-weight: 600; }
+  .dialog input, .dialog select { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--garis); border-radius: 6px; background: var(--kartu); color: var(--teks); }
 </style>
 </head>
 <body>
@@ -109,18 +124,22 @@
 <script>
 const WARNA = ["var(--utama)", "var(--nila)", "var(--langit)", "var(--biru)"];
 const app = document.getElementById("app");
-let py, api, st, dijawab = false, nama = "Pemain";
+let py, api, st, nama = "Pemain";
+let keadaan = "jawab";          // jawab → (mediasi) → selesai, atau refleksi
+let levelMediasi = 0, salahDipilih = new Set(), terakhir = null, idAI = 0;
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const panggil = (fn, ...a) => JSON.parse(api[fn](...a));
+const $ = id => document.getElementById(id);
 
 function simpanLokal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function bacaLokal(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+const cfgAI = () => bacaLokal("uc-ai", { penyedia: "openrouter", api_key: "", model: "" });
 
 async function mulaiPython() {
   try {
     py = await loadPyodide();
-    for (const f of ["soal.py", "permainan.py", "materi.py", "web_api.py"]) {
+    for (const f of ["soal.py", "permainan.py", "materi.py", "rmt.py", "ai_tutor.py", "web_api.py"]) {
       const r = await fetch(f);
       if (!r.ok) throw new Error("Gagal memuat " + f);
       py.FS.writeFile(f, await r.text());
@@ -136,6 +155,8 @@ async function mulaiPython() {
 
 /* ------------------------------------------------------------- menu */
 function menu() {
+  const ai = cfgAI();
+  const penyedia = JSON.parse(api.daftar_penyedia());
   app.innerHTML = `
     <div class="tengah">
       <div style="font-size:3rem">🛒</div>
@@ -147,32 +168,62 @@ function menu() {
         <button class="tombol langit" onclick="mulai('acak')">🎲 Latihan Soal Acak</button>
         <button class="tombol biru" onclick="materi()">📖 Pelajari Materi</button>
         <button class="tombol nila" onclick="papanSkor()">🏆 Papan Skor</button>
+        <button class="tombol langit" onclick="pengaturanAI()">⚙️ Pengaturan AI</button>
       </div>
-      <p class="kecil catatan">4 misi sesuai indikator Mathematical Literacy • dikerjakan per tahap • skor maksimum 6 per misi<br>
+      <p class="kecil" style="margin-top:14px;color:${ai.api_key ? "var(--utama)" : "var(--redup)"}">
+        ${ai.api_key ? "🤖 Tutor AI aktif (" + esc(penyedia[ai.penyedia]?.nama || ai.penyedia) + ")"
+                     : "🤖 Tutor AI belum aktif — isi API key di ⚙️ Pengaturan AI"}</p>
+      <p class="kecil catatan">Model pembelajaran: <b>Rigorous Mathematical Thinking (RMT)</b> • 4 misi literasi matematika • mediasi bertahap<br>
       Logika game ditulis dengan <b>Python</b> dan dijalankan langsung di browser.</p>
     </div>`;
 }
 
 function mulai(mode) {
-  const n = document.getElementById("nama");
+  const n = $("nama");
   if (n) { nama = n.value.trim() || "Pemain"; simpanLokal("uc-nama", nama); }
   st = panggil("mulai", mode);
-  layarMisi();
+  orientasi();
 }
 
-/* ------------------------------------------------------------- misi */
+function barAtas(denganSkor) {
+  return `<div class="bar">
+      <b>Misi ${st.i_misi + 1} dari ${st.jumlah_misi} • ${esc(st.mode)} • Model RMT</b>
+      <span>${denganSkor ? '<span class="skor" id="skor"></span>' : ""}
+        <button class="tombol abu" style="padding:6px 14px;margin-left:12px" onclick="keluar()">Menu</button></span>
+    </div>`;
+}
+const lencana = m => `<span class="lencana" style="background:${WARNA[(m.nomor - 1) % 4]}">INDIKATOR ${m.nomor}: ${esc(m.indikator.toUpperCase())}</span>`;
+const bagian = (judul, isi) => `<div class="bagian"><h3>${judul}</h3><p>${isi}</p></div>`;
+
+/* ----------------------------------------------- RMT: orientasi misi */
+function orientasi() {
+  keadaan = "orientasi";
+  const m = st.misi, r = st.rmt_misi;
+  app.innerHTML = barAtas(false) + `
+    <section class="kartu">
+      ${lencana(m)}
+      <h2 class="judul-misi" style="color:var(--utama);font-size:1.5rem">${esc(m.judul)}</h2>
+      <p class="kecil" style="margin:0">Orientasi Misi — Pengalaman Belajar Ter-mediasi (MLE)</p>
+      ${bagian("🎯 Tujuan Belajar (Intensionalitas)", esc(r.tujuan))}
+      ${bagian("💡 Mengapa Ini Penting? (Makna)", esc(r.makna))}
+      ${bagian("🔄 Dari Konsep Sehari-hari ke Konsep Matematika", esc(r.sehari_hari))}
+      ${bagian("🔍 Analisis Tugas", r.analisis.map(a => "• " + esc(a)).join("<br>"))}
+      ${bagian("🧭 Langkah Belajar (Learning Activity)", st.langkah_la.map(esc).join(" → ") +
+        "<br>Setiap tahap diberi label fase kognitif: Input → Elaborasi → Output. Jika jawabanmu belum tepat, kamu akan dimediasi lalu boleh mencoba lagi.")}
+    </section>
+    <div class="aksi" style="justify-content:flex-end">
+      <button class="tombol" onclick="layarMisi()">Saya Siap — Mulai Misi →</button>
+    </div>`;
+  window.scrollTo(0, 0);
+}
+
+/* ---------------------------------------------------------- tahapan */
 function layarMisi() {
   const m = st.misi;
-  app.innerHTML = `
-    <div class="bar">
-      <b>Misi ${st.i_misi + 1} dari ${st.jumlah_misi} • ${esc(st.mode)}</b>
-      <span><span class="skor" id="skor"></span>
-        <button class="tombol abu" style="padding:6px 14px;margin-left:12px" onclick="keluar()">Menu</button></span>
-    </div>
+  app.innerHTML = barAtas(true) + `
     <div class="grid">
       <section class="kartu">
-        <span class="lencana" style="background:${WARNA[(m.nomor - 1) % 4]}">INDIKATOR ${m.nomor}: ${esc(m.indikator.toUpperCase())}</span>
-        <p class="kecil" style="margin:6px 0 0">${esc(m.deskripsi)}</p>
+        ${lencana(m)}
         <h2 class="judul-misi">${esc(m.judul)}</h2>
         <p>${esc(m.soal)}</p>
         <b class="kecil">Tahapan Penyelesaian</b>
@@ -181,24 +232,25 @@ function layarMisi() {
       <section class="kartu" id="kerja"></section>
     </div>`;
   layarTahap();
+  window.scrollTo(0, 0);
 }
 
 function perbaruiStatus() {
-  document.getElementById("skor").textContent = `⭐ Skor: ${st.skor} / ${st.maks}`;
-  document.getElementById("tahapan").innerHTML = st.misi.tahapan.map((t, i) => {
-    const label = t.judul.split(":")[0];
+  $("skor").textContent = `⭐ Skor: ${st.skor} / ${st.maks}`;
+  $("tahapan").innerHTML = st.misi.tahapan.map((t, i) => {
+    const label = `${t.judul.split(":")[0]} [${t.fase[0].toUpperCase() + t.fase.slice(1)}]`;
     if (t.hasil === null) {
       const aktif = i === st.i_tahap;
       return `<li class="${aktif ? "aktif" : ""}">${aktif ? "▶" : "○"} ${esc(label)} — skor ${t.skor}</li>`;
     }
-    const ok = t.hasil === t.skor;
-    return `<li class="${ok ? "ok" : "salah"}">${ok ? "✔" : "✘"} ${esc(label)} — ${t.hasil}/${t.skor}</li>`;
+    if (t.hasil === t.skor) return `<li class="ok">✔ ${esc(label)} — ${t.hasil}/${t.skor}</li>`;
+    return `<li class="salah">✘ ${esc(label)} — ${t.hasil}/${t.skor}${t.ulang ? " (✔ setelah mediasi)" : ""}</li>`;
   }).join("");
 }
 
 function layarTahap() {
-  dijawab = false;
-  const t = st.tahap;
+  keadaan = "jawab"; levelMediasi = 0; salahDipilih = new Set(); terakhir = null; idAI++;
+  const t = st.tahap, r = st.rmt_tahap;
   let isi;
   if (t.jenis === "isian") {
     isi = t.isian.map((s, i) => `
@@ -215,84 +267,274 @@ function layarTahap() {
       <label class="opsi" id="opsi${i}"><input type="radio" name="pilih" value="${i}">
         <span><b>${"ABCD"[i]}.</b> ${esc(p)}</span></label>`).join("");
   }
-  document.getElementById("kerja").innerHTML = `
+  $("kerja").innerHTML = `
     <h2 class="judul-tahap">${esc(t.judul)}</h2>
     <p class="kecil" style="margin:0">Skor tahap ini: ${t.skor}</p>
+    <div class="rmt-kotak"><b>🧠 Fase ${esc(r.fase_label)}</b><br>
+      Operasi mental: ${esc(r.operasi)} • Alat psikologis: ${esc(r.alat)}<br>Fungsi kognitif: ${esc(r.fungsi)}</div>
     <p>${esc(t.perintah).replace(/\n/g, "<br>")}</p>
     ${isi}
     <div class="hasil" id="hasil" aria-live="polite"></div>
+    <div class="mediasi tersembunyi" id="mediasi"></div>
     <div class="bahas tersembunyi" id="bahas"></div>
+    <div class="ai tersembunyi" id="ai" aria-live="polite"></div>
     <div class="aksi">
-      <button class="tombol langit" id="periksa" onclick="periksa()">Periksa Jawaban</button>
+      <span>
+        <button class="tombol langit" id="periksa" onclick="periksa()">Periksa Jawaban</button>
+        <button class="tombol nila" id="tombol-mediasi" onclick="tampilMediasi()">🧭 Mediasi</button>
+        <button class="tombol biru" id="tombol-ai" onclick="mintaAI()">🤖 Mediator AI</button>
+      </span>
       <button class="tombol" id="lanjut" onclick="lanjut()" disabled>Lanjut →</button>
     </div>`;
   perbaruiStatus();
-  const pertama = document.getElementById("isi0");
+  const pertama = $("isi0");
   if (pertama) pertama.focus();
-  document.getElementById("kerja").scrollIntoView({ block: "nearest" });
+}
+
+/* RMT: pertanyaan terpimpin bertingkat (tanpa membocorkan jawaban) */
+function tampilMediasi() {
+  if (keadaan === "selesai") return;
+  const daftar = st.rmt_tahap.mediasi;
+  levelMediasi = Math.min(levelMediasi + 1, daftar.length);
+  const el = $("mediasi");
+  el.textContent = daftar.slice(0, levelMediasi).map((q, i) => `🧭 Mediasi ${i + 1}: ${q}`).join("\n");
+  el.classList.remove("tersembunyi");
+  if (levelMediasi >= daftar.length) $("tombol-mediasi").disabled = true;
+}
+
+function jawabanSaatIni() {
+  if (st.tahap.jenis === "isian") return st.tahap.isian.map((_, i) => $("isi" + i).value);
+  const r = document.querySelector('input[name="pilih"]:checked');
+  return r ? Number(r.value) : -1;
 }
 
 function periksa() {
-  if (dijawab) return;
-  const t = st.tahap;
-  let jawaban;
-  if (t.jenis === "isian") {
-    jawaban = t.isian.map((_, i) => document.getElementById("isi" + i).value);
-  } else {
-    const r = document.querySelector('input[name="pilih"]:checked');
-    jawaban = r ? Number(r.value) : -1;
-  }
-  const h = panggil("jawab", JSON.stringify(jawaban));
-  const elHasil = document.getElementById("hasil");
+  if (keadaan !== "jawab" && keadaan !== "mediasi") return;
+  const t = st.tahap, jawaban = jawabanSaatIni();
+  const ulang = keadaan === "mediasi";
+  const h = panggil("jawab", JSON.stringify(jawaban), ulang);
+  const elHasil = $("hasil");
   if (h.error) { elHasil.style.color = "var(--redup)"; elHasil.textContent = h.error; return; }
-  dijawab = true;
+  terakhir = h; st = h.status;
+  if (t.jenis === "pilihan" && !h.benar) salahDipilih.add(jawaban);
 
+  if (!ulang && !h.benar) return masukMediasi(h, jawaban);
+  elHasil.style.color = h.benar ? "var(--hijau)" : "var(--merah)";
+  elHasil.textContent = h.benar
+    ? (ulang ? "✔ Tepat setelah mediasi! Kemampuanmu berkembang — dicatat sebagai potensi belajar." : `✔ Tepat! +${h.skor} skor`)
+    : "✘ Masih belum tepat. Pelajari pembahasannya:";
+  selesaikanTahap();
+}
+
+/* Uji → Mediasi → Uji ulang (LPAD Feuerstein). Kunci belum ditampilkan. */
+function masukMediasi(h, jawaban) {
+  keadaan = "mediasi";
+  const t = st.tahap;
   if (t.jenis === "isian") {
     h.per_butir.forEach((ok, i) => {
-      document.getElementById("isi" + i).disabled = true;
-      const el = document.getElementById("tanda" + i);
+      const el = $("tanda" + i);
+      if (ok) { $("isi" + i).disabled = true; el.textContent = "✔"; el.style.color = "var(--hijau)"; }
+      else { el.textContent = "✘ periksa lagi"; el.style.color = "var(--merah)"; }
+    });
+  } else {
+    const r = document.querySelector(`input[name="pilih"][value="${jawaban}"]`);
+    r.checked = false; r.disabled = true;
+    $("opsi" + jawaban).classList.add("keliru");
+  }
+  const elHasil = $("hasil");
+  elHasil.style.color = "var(--merah)";
+  elHasil.textContent = `✘ Belum tepat (skor tahap 0/${t.skor}). Jangan menyerah — ikuti mediasi di bawah, lalu coba lagi sekali.`;
+  tampilMediasi();
+  $("periksa").textContent = "🔁 Coba Lagi";
+  const l = $("lanjut"); l.disabled = false; l.textContent = "Lihat Pembahasan";
+  perbaruiStatus();
+}
+
+function selesaikanTahap() {
+  keadaan = "selesai";
+  const t = st.tahap, h = terakhir;
+  if (t.jenis === "isian") {
+    h.per_butir.forEach((ok, i) => {
+      $("isi" + i).disabled = true;
+      const el = $("tanda" + i);
       el.textContent = ok ? "✔" : "✘ " + h.kunci_isian[i];
       el.style.color = ok ? "var(--hijau)" : "var(--merah)";
     });
   } else {
     document.querySelectorAll('input[name="pilih"]').forEach(r => r.disabled = true);
-    document.getElementById("opsi" + h.kunci_pilihan).classList.add("benar");
-    if (jawaban !== h.kunci_pilihan) document.getElementById("opsi" + jawaban).classList.add("keliru");
+    $("opsi" + h.kunci_pilihan).classList.add("benar");
+    salahDipilih.forEach(i => $("opsi" + i).classList.add("keliru"));
   }
-  elHasil.style.color = h.benar ? "var(--hijau)" : "var(--merah)";
-  elHasil.textContent = h.benar ? `✔ Tepat! +${h.skor} skor` : `✘ Belum tepat (0/${t.skor}). Pelajari pembahasannya:`;
-  const bahas = document.getElementById("bahas");
+  const bahas = $("bahas");
   bahas.textContent = "Pembahasan:\n" + h.penjelasan;
   bahas.classList.remove("tersembunyi");
-
-  st = h.status;
-  const lanjutBtn = document.getElementById("lanjut");
-  lanjutBtn.textContent = st.tahap_terakhir ? (st.misi_terakhir ? "Lihat Hasil Akhir →" : "Misi Berikutnya →") : "Tahap Berikutnya →";
-  lanjutBtn.disabled = false;
-  document.getElementById("periksa").disabled = true;
-  lanjutBtn.focus();
+  $("periksa").disabled = true;
+  $("tombol-mediasi").disabled = true;
+  $("tombol-ai").textContent = "🤖 Diagnosis AI";
+  const l = $("lanjut");
+  l.disabled = false;
+  l.textContent = st.tahap_terakhir ? "Refleksi Misi →" : "Tahap Berikutnya →";
+  l.focus();
   perbaruiStatus();
 }
 
 function lanjut() {
-  if (!dijawab) return;
-  const akhirMisi = st.tahap_terakhir;
+  if (keadaan === "mediasi") {
+    const elHasil = $("hasil");
+    elHasil.style.color = "var(--redup)";
+    elHasil.textContent = "Pembahasan ditampilkan tanpa uji ulang.";
+    return selesaikanTahap();
+  }
+  if (keadaan !== "selesai") return;
+  if (st.tahap_terakhir) return refleksi();
   st = panggil("maju");
-  if (st.selesai) hasilAkhir();
-  else if (akhirMisi) { layarMisi(); window.scrollTo(0, 0); }
-  else layarTahap();
+  layarTahap();
 }
 
 function keluar() { if (confirm("Akhiri permainan dan kembali ke menu?")) menu(); }
 
 document.addEventListener("keydown", e => {
-  if (e.key !== "Enter" || !document.getElementById("kerja")) return;
+  if (e.key !== "Enter" || !$("kerja") || document.querySelector(".lapisan")) return;
   e.preventDefault();
-  dijawab ? lanjut() : periksa();
+  keadaan === "selesai" ? lanjut() : periksa();
 });
+
+/* ------------------------------------------ RMT: refleksi & transendensi */
+function refleksi() {
+  keadaan = "refleksi"; idAI++;
+  const m = st.misi;
+  const bintang = st.skor_misi === 6 ? 3 : st.skor_misi >= 4 ? 2 : st.skor_misi >= 2 ? 1 : 0;
+  app.innerHTML = barAtas(false) + `
+    <section class="kartu">
+      <h2 style="color:var(--utama);margin:0">🪞 Refleksi & Transendensi — Misi ${m.nomor}</h2>
+      <p class="kecil" style="margin:0">${esc(m.judul)} • Skor ${st.skor_misi}/6 <span class="bintang">${"★".repeat(bintang)}${"☆".repeat(3 - bintang)}</span></p>
+      ${bagian("🌉 Transendensi — Prinsip Umum", esc(st.rmt_misi.transendensi))}
+      <div class="bagian"><h3>🪞 Refleksi Diri (Metakognisi)</h3></div>
+      <p style="margin:6px 0 2px">1. Fase berpikir mana yang paling menantang bagimu pada misi ini?</p>
+      <div class="pilihan-refleksi">${st.opsi_refleksi_fase.map(([k, v]) =>
+        `<label><input type="radio" name="rfase" value="${esc(k)}"> ${esc(v)}</label>`).join("")}</div>
+      <p style="margin:10px 0 2px">2. Strategi apa yang paling membantumu?</p>
+      <div class="pilihan-refleksi">${st.opsi_refleksi_strategi.map(v =>
+        `<label><input type="radio" name="rstrategi" value="${esc(v)}"> ${esc(v)}</label>`).join("")}</div>
+      <div class="hasil" id="hasil" style="color:var(--merah)"></div>
+      <div class="ai tersembunyi" id="ai" aria-live="polite"></div>
+    </section>
+    <div class="aksi">
+      <button class="tombol biru" id="tombol-ai" onclick="mintaAI()">🤖 Tanggapan AI atas Refleksiku</button>
+      <button class="tombol" onclick="selesaiRefleksi()">${st.misi_terakhir ? "Lihat Hasil Akhir →" : "Misi Berikutnya →"}</button>
+    </div>`;
+  window.scrollTo(0, 0);
+}
+
+function refleksiTerpilih() {
+  const f = document.querySelector('input[name="rfase"]:checked');
+  const s = document.querySelector('input[name="rstrategi"]:checked');
+  if (!f || !s) { $("hasil").textContent = "Jawab kedua pertanyaan refleksi terlebih dahulu."; return null; }
+  return { fase: f.value, strategi: s.value };
+}
+
+function selesaiRefleksi() {
+  const r = refleksiTerpilih();
+  if (!r) return;
+  panggil("simpan_refleksi", r.fase, r.strategi);
+  st = panggil("maju");
+  st.selesai ? hasilAkhir() : orientasi();
+}
+
+/* ------------------------------------------------------- tutor AI */
+async function mintaAI() {
+  const cfg = cfgAI();
+  if (!cfg.api_key) {
+    if (confirm("API key DeepSeek belum diisi. Buka Pengaturan AI sekarang?")) pengaturanAI();
+    return;
+  }
+  let jenis, data = "-1", judul;
+  if (keadaan === "refleksi") {
+    const r = refleksiTerpilih();
+    if (!r) return;
+    jenis = "refleksi"; data = JSON.stringify(r); judul = "🤖 Tanggapan Mediator AI";
+  } else if (keadaan === "selesai") {
+    jenis = "penjelasan"; judul = "🤖 Diagnosis Mediator AI";
+  } else {
+    jenis = "petunjuk"; data = JSON.stringify(jawabanSaatIni()); judul = "🤖 Mediator AI";
+  }
+  const req = panggil("permintaan_ai", jenis, data, cfg.penyedia, cfg.model || "");
+  const kotak = $("ai"), tombol = $("tombol-ai"), id = idAI;
+  kotak.textContent = judul + "\nSedang berpikir…";
+  kotak.classList.remove("tersembunyi");
+  tombol.disabled = true;
+  const teks = await kirimAI(req, cfg.api_key);
+  if (id !== idAI || !document.body.contains(kotak)) return;
+  kotak.textContent = judul + "\n" + teks;
+  tombol.disabled = false;
+}
+
+async function kirimAI(req, key) {
+  try {
+    const r = await fetch(req.url, {
+      method: "POST",
+      headers: { ...req.headers, Authorization: "Bearer " + key.trim() },
+      body: JSON.stringify(req.body),
+    });
+    if (!r.ok) return "⚠️ " + api.galat_http(r.status);
+    const h = JSON.parse(api.ambil_teks_ai(await r.text()));
+    return h.error ? "⚠️ " + h.error : h.teks;
+  } catch (e) {
+    return "⚠️ Tidak dapat terhubung ke server AI. Periksa koneksi internet. Jika memakai DeepSeek resmi " +
+           "dan tetap gagal, server mungkin menolak akses dari browser — coba penyedia OpenRouter.";
+  }
+}
+
+function pengaturanAI() {
+  const cfg = cfgAI(), penyedia = JSON.parse(api.daftar_penyedia());
+  const lapisan = document.createElement("div");
+  lapisan.className = "lapisan";
+  lapisan.innerHTML = `
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="judul-ai">
+      <h2 id="judul-ai" style="color:var(--utama);margin:0">⚙️ Pengaturan Tutor AI</h2>
+      <p class="kecil">Masukkan API key DeepSeek agar aplikasi bisa memberi mediasi, diagnosis, dan tanggapan refleksi.
+        Key hanya disimpan di browser perangkat ini dan tidak dikirim ke mana pun selain penyedia AI yang dipilih.</p>
+      <label for="ai-penyedia">Penyedia</label>
+      <select id="ai-penyedia">${Object.entries(penyedia).map(([k, v]) =>
+        `<option value="${esc(k)}" ${k === cfg.penyedia ? "selected" : ""}>${esc(v.nama)}</option>`).join("")}</select>
+      <label for="ai-key">API key</label>
+      <input id="ai-key" type="password" autocomplete="off" value="${esc(cfg.api_key)}">
+      <label style="font-weight:400"><input type="checkbox" id="ai-lihat" style="width:auto"> Tampilkan key</label>
+      <label for="ai-model">Model (kosongkan untuk bawaan)</label>
+      <input id="ai-model" value="${esc(cfg.model)}" placeholder="">
+      <p class="kecil" id="ai-bawaan"></p>
+      <div class="hasil" id="ai-status" style="font-size:.95rem"></div>
+      <div class="aksi">
+        <button class="tombol langit" id="ai-tes">Tes Koneksi</button>
+        <span><button class="tombol abu" id="ai-batal">Batal</button>
+        <button class="tombol" id="ai-simpan">Simpan</button></span>
+      </div>
+    </div>`;
+  document.body.appendChild(lapisan);
+  const ambil = () => ({ penyedia: $("ai-penyedia").value, api_key: $("ai-key").value.trim(), model: $("ai-model").value.trim() });
+  const bawaan = () => { $("ai-bawaan").textContent = "Model bawaan: " + penyedia[$("ai-penyedia").value].model; };
+  bawaan();
+  $("ai-penyedia").onchange = bawaan;
+  $("ai-lihat").onchange = e => { $("ai-key").type = e.target.checked ? "text" : "password"; };
+  const tutup = () => lapisan.remove();
+  $("ai-batal").onclick = tutup;
+  lapisan.addEventListener("keydown", e => { if (e.key === "Escape") tutup(); });
+  $("ai-simpan").onclick = () => { simpanLokal("uc-ai", ambil()); tutup(); if (!$("kerja") && keadaan !== "refleksi" && keadaan !== "orientasi") menu(); };
+  $("ai-tes").onclick = async () => {
+    const c = ambil(), s = $("ai-status");
+    if (!c.api_key) { s.style.color = "var(--merah)"; s.textContent = "Isi API key terlebih dahulu."; return; }
+    s.style.color = "var(--redup)"; s.textContent = "Menghubungi AI…";
+    const teks = await kirimAI(panggil("permintaan_tes", c.penyedia, c.model), c.api_key);
+    const ok = !teks.startsWith("⚠️");
+    s.style.color = ok ? "var(--hijau)" : "var(--merah)";
+    s.textContent = ok ? "✔ Berhasil terhubung! Jawaban AI: " + teks : "✘ " + teks.replace("⚠️ ", "");
+  };
+  $("ai-key").focus();
+}
 
 /* ------------------------------------------------------------- hasil */
 function hasilAkhir() {
+  keadaan = "hasil";
   const daftar = bacaLokal("uc-skor", []);
   const entri = { nama, nilai: st.nilai, skor: st.skor, mode: st.mode, tanggal: new Date().toISOString().slice(0, 10), baru: true };
   daftar.push(entri);
@@ -303,6 +545,7 @@ function hasilAkhir() {
   simpanLokal("uc-skor", top);
 
   const lemah = st.misi.filter(m => m.skor < m.maks).map(m => m.indikator);
+  const refleksi = st.refleksi.map((r, i) => r ? `Misi ${i + 1}: sulit di ${r}` : null).filter(Boolean);
   app.innerHTML = `
     <div class="tengah">
       <div style="font-size:3rem">${st.nilai >= 75 ? "🏆" : "📚"}</div>
@@ -317,8 +560,19 @@ function hasilAkhir() {
           <td>${m.skor} / ${m.maks}</td><td class="bintang">${"★".repeat(m.bintang)}${"☆".repeat(3 - m.bintang)}</td></tr>`).join("")}
       </table>
     </div>
+    <section class="kartu" style="margin-top:14px;background:var(--lembut)">
+      <h2 style="color:var(--biru);margin:0 0 8px;font-size:1.2rem">🧠 Profil Fungsi Kognitif (Model RMT)</h2>
+      ${st.profil.map(p => `<div class="profil-baris"><span>${esc(p.fase)}</span>
+        <div class="batang"><span style="width:${p.maks ? p.dapat * 100 / p.maks : 0}%"></span></div>
+        <span>${p.dapat}/${p.maks} (${p.maks ? Math.round(p.dapat * 100 / p.maks) : 0}%)</span></div>`).join("")}
+      <p>📈 Asesmen dinamis (Uji – Mediasi – Uji ulang): skor awal ${st.skor}/${st.maks} → setelah mediasi
+        <b>${st.skor_mediasi}/${st.maks}</b> (${st.jumlah_mediasi} kali uji ulang).</p>
+      <p>${st.fase_lemah ? `🎯 Fase yang perlu dilatih: <b>${esc(st.fase_lemah)}</b>.<br>${esc(st.rekomendasi)}`
+                         : "✅ Semua fase kognitif sudah sangat baik. Pertahankan cara berpikir yang teliti!"}</p>
+      ${refleksi.length ? `<p class="kecil">🪞 Refleksimu — ${esc(refleksi.join("; "))}.</p>` : ""}
+    </section>
     <div class="tengah">
-      <p>${lemah.length ? "Perlu latihan lagi pada: " + esc(lemah.join("; ")) + "." : "Sempurna! Semua indikator literasi matematika tercapai."}</p>
+      <p>${lemah.length ? "Perlu latihan lagi pada indikator: " + esc(lemah.join("; ")) + "." : "Sempurna! Semua indikator literasi matematika tercapai."}</p>
       ${peringkat ? `<p style="color:var(--nila);font-weight:700">Kamu masuk papan skor di peringkat #${peringkat}!</p>` : ""}
       <button class="tombol langit" onclick="mulai('${st.mode === "Soal Kisi-kisi" ? "kisi" : "acak"}')">Ulangi</button>
       <button class="tombol biru" onclick="mulai('acak')">Latihan Acak</button>
@@ -329,12 +583,13 @@ function hasilAkhir() {
 
 /* ------------------------------------------------------------- materi */
 function materi() {
+  keadaan = "materi";
   const data = panggil("materi");
   app.innerHTML = `
     <h1 style="color:var(--biru);font-size:1.8rem">📖 Materi: Persentase Untung dan Rugi</h1>
     <div class="materi" style="margin-top:14px">
-      <nav>${data.map((m, i) => `<button id="mt${i}" onclick="tampilMateri(${i})">${esc(m.judul)}</button>`).join("")}</nav>
-      <section class="kartu"><h2 id="mjudul" style="color:var(--biru);margin-top:0"></h2><pre id="misi-materi"></pre></section>
+      <nav>${data.map((m, i) => `<button onclick="tampilMateri(${i})">${esc(m.judul)}</button>`).join("")}</nav>
+      <section class="kartu"><h2 id="mjudul" style="color:var(--biru);margin-top:0"></h2><pre id="isi-materi"></pre></section>
     </div>
     <p><button class="tombol abu" onclick="menu()">← Kembali</button></p>`;
   window._materi = data;
@@ -342,12 +597,13 @@ function materi() {
 }
 function tampilMateri(i) {
   document.querySelectorAll(".materi nav button").forEach((b, j) => b.classList.toggle("aktif", i === j));
-  document.getElementById("mjudul").textContent = window._materi[i].judul;
-  document.getElementById("misi-materi").textContent = window._materi[i].isi;
+  $("mjudul").textContent = window._materi[i].judul;
+  $("isi-materi").textContent = window._materi[i].isi;
 }
 
 /* ------------------------------------------------------------- papan skor */
 function papanSkor() {
+  keadaan = "skor";
   const data = bacaLokal("uc-skor", []);
   app.innerHTML = `
     <h1 style="color:var(--nila);font-size:1.8rem" class="tengah">🏆 Papan Skor</h1>

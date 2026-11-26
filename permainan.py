@@ -46,8 +46,12 @@ class Permainan:
         self.misi: list[Misi] = misi_kisi_kisi(rng) if mode == "kisi" else misi_acak(rng)
         self.i_misi = 0
         self.i_tahap = 0
-        # skor tiap tahap; None = belum dijawab
+        # skor tiap tahap pada percobaan pertama; None = belum dijawab
         self.skor_tahap = [[None] * len(m.tahapan) for m in self.misi]
+        # skor uji ulang setelah mediasi (asesmen dinamis RMT); None = tidak diulang
+        self.skor_ulang = [[None] * len(m.tahapan) for m in self.misi]
+        # refleksi siswa per misi: {"fase": ..., "strategi": ...}
+        self.refleksi: list = [None] * len(self.misi)
 
     # ---------------------------------------------------------------- posisi
     @property
@@ -80,6 +84,26 @@ class Permainan:
         self.skor_tahap[self.i_misi][self.i_tahap] = skor
         return Hasil(per_butir, skor)
 
+    @property
+    def boleh_ulang(self) -> bool:
+        """Uji ulang hanya boleh sekali, setelah percobaan pertama salah."""
+        i, j = self.i_misi, self.i_tahap
+        return self.skor_tahap[i][j] == 0 and self.skor_ulang[i][j] is None
+
+    def jawab_ulang(self, jawaban) -> Hasil:
+        """Percobaan kedua setelah siswa menerima mediasi (Uji – Mediasi – Uji ulang).
+        Tidak mengubah skor resmi (sesuai kisi-kisi), tetapi dicatat sebagai potensi belajar."""
+        if not self.boleh_ulang:
+            raise RuntimeError("Uji ulang tidak tersedia untuk tahap ini")
+        t = self.tahap_sekarang
+        per_butir = t.periksa(jawaban)
+        skor = t.skor if all(per_butir) else 0
+        self.skor_ulang[self.i_misi][self.i_tahap] = skor
+        return Hasil(per_butir, skor)
+
+    def simpan_refleksi(self, fase: str, strategi: str):
+        self.refleksi[self.i_misi] = {"fase": fase, "strategi": strategi}
+
     def maju(self):
         self.i_tahap += 1
         if self.i_tahap >= len(self.misi_sekarang.tahapan):
@@ -101,3 +125,18 @@ class Permainan:
     @property
     def nilai(self) -> int:
         return round(self.skor * 100 / self.skor_maks)
+
+    @property
+    def skor_setelah_mediasi(self) -> int:
+        """Skor jika jawaban benar pada uji ulang ikut dihitung (potensi belajar)."""
+        total = 0
+        for awal, ulang in zip(self.skor_tahap, self.skor_ulang):
+            for a, u in zip(awal, ulang):
+                total += a or 0
+                if not a and u:
+                    total += u
+        return total
+
+    @property
+    def jumlah_mediasi(self) -> int:
+        return sum(u is not None for baris in self.skor_ulang for u in baris)

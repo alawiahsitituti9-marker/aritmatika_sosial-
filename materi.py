@@ -69,6 +69,37 @@ paling besar. Persentasenya sama dengan Toko A (25%).
 ✘ Menjumlahkan harga beli dengan angka persen,
    misal Rp250.000 + 20 (seharusnya + Rp50.000).
 """),
+    ("Cara Belajar: Model RMT", """\
+Aplikasi ini memakai model Rigorous Mathematical Thinking
+(RMT) dari Kinard & Kozulin. Artinya, kamu tidak hanya
+mencari jawaban, tetapi melatih CARA BERPIKIR.
+
+1. Orientasi (Mediasi)
+   Setiap misi dibuka dengan tujuan belajar, makna,
+   dan analisis tugas: apa yang diketahui & ditanya.
+
+2. Tiga fase berpikir di setiap tahap
+   • INPUT     : mengumpulkan informasi dengan teliti
+   • ELABORASI : mengolah informasi (rumus, membandingkan)
+   • OUTPUT    : menyimpulkan & menjelaskan dengan tepat
+
+3. Alat berpikir (alat psikologis)
+   Tabel, rumus, simbol %, garis bilangan, skema
+   bagian-keseluruhan, dan bahasa matematika.
+
+4. Mediasi bertingkat
+   Klik 🧭 Mediasi untuk pertanyaan penuntun.
+   Jika salah, kamu dimediasi lalu boleh mencoba lagi
+   (Uji → Mediasi → Uji ulang).
+
+5. Refleksi & Transendensi
+   Di akhir misi kamu merefleksikan cara berpikirmu dan
+   mempelajari prinsip umum yang berlaku di situasi lain.
+
+6. Profil fungsi kognitif
+   Hasil akhir menunjukkan fase mana yang sudah kuat
+   dan mana yang perlu dilatih.
+"""),
     ("Literasi Matematika", """\
 Soal dalam game ini disusun berdasarkan 4 indikator
 Mathematical Literacy:

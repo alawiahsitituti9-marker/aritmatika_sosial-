@@ -5,3 +5,4 @@ venv/
 skor_tertinggi.json
 .vscode/
 .claude/
+config_ai.json
